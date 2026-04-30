@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package coregateway.v1;
+
+option go_package = "core-gateway/packages/proto/core-gateway;coregatewayv1";
+
+message HealthzRequest {}
+
+message HealthzResponse {
+  string status = 1;
+}
+
+message MeRequest {
+  string bearer_token = 1;
+}
+
+message MeResponse {
+  map<string, string> claims = 1;
+}
+
+service CoreGatewayService {
+  rpc Healthz(HealthzRequest) returns (HealthzResponse);
+  rpc Me(MeRequest) returns (MeResponse);
+}

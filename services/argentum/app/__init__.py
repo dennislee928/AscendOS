@@ -1,0 +1,2 @@
+"""Argentum service package."""
+
