@@ -280,6 +280,18 @@ Open questions to resolve before Phase 1 kick-off:
 - [ ] Docs site live with API reference + ADRs + onboarding guide.
 - [ ] CI green on `main`, signed release tag pushed.
 
+## 9. check list 
+
+- [ ] phase 1 - description:
+- [ ] phase 2 - description:
+- [ ] phase 3 - description:
+- [ ] phase 4 - description:
+- [ ] phase 5 - description:
+- [ ] phase 6 - description:
+- [ ] phase 7 - description:
+- [ ] phase 8 - description:
+- [ ] phase 9 - description:
+
 ---
 
 *End of plan.*
