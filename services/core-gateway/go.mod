@@ -4,7 +4,7 @@ go 1.22
 
 require (
 	github.com/gin-gonic/gin v1.10.1
-	github.com/nats-io/nats.go v2.37.0+incompatible
+	github.com/nats-io/nats.go v1.34.1
 )
 
 require (
