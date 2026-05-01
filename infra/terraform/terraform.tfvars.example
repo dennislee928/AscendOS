@@ -1,0 +1,14 @@
+github_repo_url = "https://github.com/your-org/cutting-edge-tools-demo"
+github_branch   = "main"
+
+render_owner_id = "usr-xxxxxxxxxxxx"
+
+cloudflare_account_id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+cloudflare_zone_id    = ""
+
+supabase_org_id = "xxxxxxxxxxxxxxxx"
+
+upstash_email = "you@example.com"
+
+mongodbatlas_org_id      = "xxxxxxxxxxxxxxxxxxxxxxxx"
+mongodbatlas_db_username = "ascendos-app"
