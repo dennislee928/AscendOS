@@ -6,6 +6,41 @@ info:
 servers:
   - url: http://localhost:8080
 paths:
+  /modules:
+    get:
+      operationId: listModules
+      summary: List the AscendOS module catalog
+      responses:
+        '200':
+          description: Catalog response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  modules:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ModuleCatalogEntry'
+  /modules/{name}:
+    get:
+      operationId: getModule
+      summary: Fetch a single module by name
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Module response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModuleCatalogEntry'
+        '404':
+          description: Module not found
   /healthz:
     get:
       operationId: healthz
@@ -61,6 +96,22 @@ paths:
         '401':
           description: Missing or invalid bearer token
 components:
+  schemas:
+    ModuleCatalogEntry:
+      type: object
+      properties:
+        name:
+          type: string
+        key:
+          type: string
+        language:
+          type: string
+        domain:
+          type: string
+        summary:
+          type: string
+        servicePath:
+          type: string
   securitySchemes:
     bearerAuth:
       type: http

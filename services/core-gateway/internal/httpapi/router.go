@@ -14,6 +14,8 @@ import (
 const requestIDHeader = "X-Request-Id"
 
 func NewRouter() *gin.Engine {
+	catalog := newModuleCatalog()
+
 	r := gin.New()
 	r.Use(requestIDMiddleware(), gin.Logger(), gin.Recovery())
 
@@ -27,6 +29,20 @@ func NewRouter() *gin.Engine {
 
 	r.GET("/metrics", func(c *gin.Context) {
 		c.Data(http.StatusOK, "text/plain; version=0.0.4", []byte("# core-gateway metrics placeholder\n"))
+	})
+
+	r.GET("/modules", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"modules": catalog.all()})
+	})
+
+	r.GET("/modules/:name", func(c *gin.Context) {
+		module, ok := catalog.get(c.Param("name"))
+		if !ok {
+			c.JSON(http.StatusNotFound, gin.H{"error": "module not found"})
+			return
+		}
+
+		c.JSON(http.StatusOK, module)
 	})
 
 	r.GET("/me", func(c *gin.Context) {

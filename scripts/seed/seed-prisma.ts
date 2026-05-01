@@ -4,26 +4,16 @@
  */
 
 import { requireEnvSet } from "./env";
+import { seedManifest } from "../../infra/data-plane/seed-manifest";
 
 type SeedContext = {
   databaseUrl?: string;
   directUrl?: string;
 };
 
-const MODULES = [
-  { key: "CHRONOS", name: "chronos" },
-  { key: "AEGIS", name: "aegis" },
-  { key: "NEURO", name: "neuro" },
-  { key: "ORATOR", name: "orator" },
-  { key: "METIS", name: "metis" },
-  { key: "ARGENTUM", name: "argentum" },
-  { key: "KAIROS", name: "kairos" },
-  { key: "PRAXIS", name: "praxis" },
-] as const;
-
 async function seedModules(_ctx: SeedContext): Promise<void> {
   // Placeholder: upsert module catalog into relational store.
-  console.log(`[seed-prisma] would seed ${MODULES.length} modules`);
+  console.log(`[seed-prisma] would seed ${seedManifest.modules.length} modules`);
 }
 
 async function seedSampleUser(_ctx: SeedContext): Promise<void> {
@@ -50,6 +40,9 @@ async function main(): Promise<void> {
   };
   console.log(
     "[seed-prisma] env check passed for DATABASE_URL and DIRECT_URL; Prisma schema is ready for the relational bootstrap step",
+  );
+  console.log(
+    `[seed-prisma] canonical manifest loaded with ${seedManifest.modules.length} modules and ${seedManifest.documentSources.length} document sources`,
   );
   await seedModules(ctx);
   await seedSampleUser(ctx);

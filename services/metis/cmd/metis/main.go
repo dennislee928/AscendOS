@@ -1,33 +1,21 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 
 	"metis/internal/config"
+	"metis/internal/httpapi"
 )
 
 func main() {
 	cfg := config.Load()
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"status":  "ok",
-			"service": cfg.ServiceName,
-		})
-	})
+	handler := httpapi.NewHandler(cfg.ServiceName)
 
 	server := &http.Server{
 		Addr:              cfg.HTTPAddr,
-		Handler:           mux,
+		Handler:           handler,
 		ReadHeaderTimeout: cfg.ReadHeaderTimeout,
 	}
 

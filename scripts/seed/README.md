@@ -4,13 +4,14 @@ This folder contains scaffolding for data-plane seed routines.
 
 - `seed-prisma.ts`: relational bootstrap (users/modules/events/insights).
 - `seed-qdrant.ts`: vector collection bootstrap and document upsert placeholder.
+- Both scripts consume the canonical manifest in `infra/data-plane/seed-manifest.ts`.
 
 These scripts are placeholders and intentionally avoid provider-specific SDK wiring until service packages are added.
 
 ## Required env
 
 - `seed-prisma.ts` expects `DATABASE_URL` and `DIRECT_URL`.
-- `seed-qdrant.ts` expects `QDRANT_URL` and `QDRANT_API_KEY`; `QDRANT_COLLECTION` is optional and defaults to `self_improvement_docs`.
+- `seed-qdrant.ts` expects `QDRANT_URL` and `QDRANT_API_KEY`; `QDRANT_COLLECTION` is optional and defaults to the manifest collection `self_improvement_docs`.
 
 ## Quick note
 

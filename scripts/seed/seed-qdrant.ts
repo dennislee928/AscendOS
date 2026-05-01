@@ -4,22 +4,23 @@
  */
 
 import { requireEnvSet } from "./env";
+import { resolveQdrantCollection, seedManifest } from "../../infra/data-plane/seed-manifest";
 
 type QdrantSeedConfig = {
   url?: string;
   apiKey?: string;
-  collection?: string;
+  collection: string;
 };
 
 async function ensureCollection(config: QdrantSeedConfig): Promise<void> {
-  console.log(
-    `[seed-qdrant] would ensure collection "${config.collection ?? "self_improvement_docs"}"`,
-  );
+  console.log(`[seed-qdrant] would ensure collection "${config.collection}"`);
 }
 
 async function upsertDocuments(_config: QdrantSeedConfig): Promise<void> {
   // Placeholder: read docs, chunk, embed, and upsert vectors.
-  console.log("[seed-qdrant] would upsert embedded document chunks");
+  console.log(
+    `[seed-qdrant] would upsert ${seedManifest.documentSources.length} embedded document sources`,
+  );
 }
 
 async function main(): Promise<void> {
@@ -36,10 +37,13 @@ async function main(): Promise<void> {
   const config: QdrantSeedConfig = {
     url: env.QDRANT_URL,
     apiKey: env.QDRANT_API_KEY,
-    collection: process.env.QDRANT_COLLECTION,
+    collection: resolveQdrantCollection(process.env.QDRANT_COLLECTION),
   };
   console.log(
-    `[seed-qdrant] env check passed for ${config.collection ?? "self_improvement_docs"}; the provider template is wired for vector bootstrap`,
+    `[seed-qdrant] env check passed for ${config.collection}; the provider template is wired for vector bootstrap`,
+  );
+  console.log(
+    `[seed-qdrant] canonical manifest loaded with ${seedManifest.modules.length} modules and ${seedManifest.documentSources.length} document sources`,
   );
   await ensureCollection(config);
   await upsertDocuments(config);
