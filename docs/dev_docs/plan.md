@@ -345,4 +345,48 @@ Main agent scanned all service files, identified the next disjoint depth layer, 
 
 ---
 
+## 11. CI Fixes & Infrastructure Gaps (2026-05-01)
+
+### CI failures fixed
+| Failure | Root cause | Fix |
+|---------|-----------|-----|
+| `unit-coverage (rust)` exit 101 | `cargo test --offline` fails on fresh runner with empty cargo cache | Removed `--offline`; added `Swatinem/rust-cache@v2` to workflow |
+| `unit-coverage (python)` exit 1 | `test_contract_smoke.py` imports FastAPI/Pydantic/LangGraph; no `requirements.txt` existed | Created `requirements.txt` per service; added `pip install` discovery step before coverage gate |
+
+### New CI/CD pipelines added
+| File | Purpose |
+|------|---------|
+| `.github/workflows/ci-lint.yml` | golangci-lint + gofmt (Go), clippy + rustfmt (Rust), ruff (Python), prettier (TS/Svelte) |
+| `.github/workflows/ci-security.yml` | osv-scanner, govulncheck (Go), pip-audit (Python), cargo-audit (Rust) |
+| `.github/workflows/ci-docker.yml` | `docker build` dry-run for all 10 service images + hadolint Dockerfile linter |
+
+### Env files added
+| File | Purpose |
+|------|---------|
+| `.env.example` | Root aggregated env template covering all services, providers, and observability |
+| `services/neuro/requirements.txt` | Python deps for neuro (fastapi, pydantic, uvicorn) |
+| `services/argentum/requirements.txt` | Python deps for argentum |
+| `services/kairos/requirements.txt` | Python deps for kairos |
+| `services/agent-orchestrator/requirements.txt` | Python deps including langgraph |
+
+### Honest plan completion status
+
+The plan checklist marks all 9 phases `[x]` — that reflects the **scaffold + contract** layer being in place. The following production integrations are **not yet implemented** and are the real remaining work before v1.0:
+
+| Area | Status |
+|------|--------|
+| Live DB connections (Postgres, Redis, MongoDB, Qdrant, InfluxDB) | Not wired — services use in-memory / file-backed stores |
+| Supabase Auth JWKS validation | Partial — gateway validates local HS256; JWKS endpoint fetch not wired |
+| RAG pipeline in `neuro` | Not wired — heuristic only |
+| Prophet forecasting in `argentum` | Not wired — scoring model only |
+| LLM calls in `agent-orchestrator` | Not wired — nodes run local heuristics |
+| NATS JetStream stream provisioning | Publisher wired, JetStream stream not yet declared |
+| Schemathesis live run against deployed Spaces | Offline spec validation only |
+| E2E Playwright tests | Offline smoke only |
+| `go mod tidy` for NATS dep in core-gateway | go.sum entry missing — must run `go mod tidy` after checkout |
+| `QUALITY_GATES_STRICT=1` enforcement | Gates exist but strict mode is off |
+| v1.0.0 tag | Blocked on above |
+
+---
+
 *End of plan.*

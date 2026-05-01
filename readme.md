@@ -62,6 +62,41 @@ All 9 phases scaffolded and progressively deepened across 4 implementation waves
 | 3 | Core-gateway JWT auth, CI automation scripts, Qwik module pages, Svelte module pages |
 | 4 | Python services → real FastAPI; agent-orchestrator → LangGraph StateGraph; Prometheus 15-rule alert suite; k3s manifests; NATS event publisher in core-gateway |
 
+## Infrastructure as Code (Terraform)
+
+`infra/terraform/` provisions all free-tier cloud resources. `deploy-docker-hf.yml` handles container builds and HF Spaces deployments; Terraform manages everything else.
+
+| Provider | Resource | Free tier |
+|----------|----------|-----------|
+| **Render** | 10 web services (compute fallback) | 750 hr/month per service (sleep on idle) |
+| **Supabase** | Postgres project | 500 MB DB, 1 GB storage |
+| **Upstash** | Redis database (TLS) | 10k commands/day |
+| **MongoDB Atlas** | M0 free cluster | 512 MB storage |
+| **Cloudflare Pages** | Qwik web app | Unlimited bandwidth |
+| **Terraform Cloud** | State backend | Free up to 500 resources |
+
+### Terraform commands
+```bash
+cd infra/terraform
+terraform init          # first time — needs TF_API_TOKEN
+terraform plan          # preview changes
+terraform apply         # provision/update infra
+```
+
+### Required GitHub Actions secrets (for ci-terraform.yml)
+`TF_API_TOKEN`, `TF_VAR_render_api_key`, `TF_VAR_cloudflare_api_token`, `TF_VAR_supabase_access_token`, `TF_VAR_supabase_db_password`, `TF_VAR_upstash_api_key`, `TF_VAR_mongodbatlas_public_key`, `TF_VAR_mongodbatlas_private_key`, `TF_VAR_mongodbatlas_db_password`, `TF_VAR_jwt_secret`
+
+## CI/CD Pipelines
+
+| Workflow | Trigger | What it does |
+|----------|---------|-------------|
+| `phase9-quality-gates.yml` | PR + main + nightly | Unit coverage, schemathesis, HF contract validation, E2E smoke |
+| `ci-lint.yml` | PR + main | golangci-lint, clippy, ruff, prettier |
+| `ci-security.yml` | PR + main + weekly | osv-scanner, govulncheck, pip-audit, cargo-audit |
+| `ci-docker.yml` | PR (infra/docker changes) + main | Docker build dry-run for all 10 images + hadolint |
+| `ci-terraform.yml` | PR + main (infra/terraform changes) | fmt/validate, plan (PR comment), apply (main, needs manual approval) |
+| `deploy-docker-hf.yml` | Push to main (services/infra changes) | Build → Docker Hub → HF Spaces + health report |
+
 ## Remaining Integration Work
 
 - Wire real provider secrets/env (Supabase, Redis, MongoDB, Qdrant, InfluxDB) and replace in-memory/file stores with live DB clients

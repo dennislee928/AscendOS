@@ -52,11 +52,24 @@ jobs:
         if: matrix.language == 'rust'
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Cache Cargo
+        if: matrix.language == 'rust'
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            services/aegis
+            services/orator
+
       - name: Setup Node
         if: matrix.language == 'node'
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+
+      - name: Install Python service dependencies
+        if: matrix.language == 'python'
+        run: |
+          find services -name requirements.txt -exec pip install -r {} \;
 
       - name: Coverage gate
         run: |
