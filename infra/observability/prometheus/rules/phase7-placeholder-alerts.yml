@@ -1,0 +1,32 @@
+groups:
+  - name: phase7-placeholder-alerts
+    rules:
+      - alert: OTelCollectorDown
+        expr: up{job="otel-collector-exported"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "OpenTelemetry collector endpoint is down"
+          description: "Prometheus cannot scrape otel-collector:8889 for more than 2 minutes."
+
+      - alert: MessagingBrokerDown
+        expr: min(up{job=~"nats-exporter|redpanda|rabbitmq"}) == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "One or more messaging targets are down"
+          description: "At least one broker/exporter scrape target has been down for more than 2 minutes."
+
+      - alert: ObservabilityPlaneDown
+        expr: min(up{job=~"otel-collector-exported|jaeger"}) == 0
+        for: 2m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "An observability target is down"
+          description: "At least one observability target (OTel collector or Jaeger) has been down for more than 2 minutes."

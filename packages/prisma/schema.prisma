@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum ModuleKey {
+  CHRONOS
+  AEGIS
+  NEURO
+  ORATOR
+  METIS
+  ARGENTUM
+  KAIROS
+  PRAXIS
+}
+
+enum MembershipStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  ARCHIVED
+}
+
+enum EventType {
+  CHECK_IN
+  SESSION_START
+  SESSION_END
+  JOURNAL
+  QUIZ_RESULT
+  HABIT_TICK
+  SYSTEM
+}
+
+enum InsightKind {
+  TREND
+  ANOMALY
+  RECOMMENDATION
+  SUMMARY
+  RISK
+}
+
+model User {
+  id                String                 @id @default(cuid())
+  email             String                 @unique
+  displayName       String?
+  timezone          String                 @default("UTC")
+  locale            String                 @default("en-US")
+  isActive          Boolean                @default(true)
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  memberships       ModuleMembership[]
+  modulePreferences UserModulePreference[]
+  events            Event[]
+  insights          Insight[]
+}
+
+model Module {
+  id          String                 @id @default(cuid())
+  key         ModuleKey              @unique
+  name        String
+  description String?
+  isEnabled   Boolean                @default(true)
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  memberships ModuleMembership[]
+  preferences UserModulePreference[]
+  events      Event[]
+  insights    Insight[]
+}
+
+model ModuleMembership {
+  id               String           @id @default(cuid())
+  userId           String
+  moduleId         String
+  status           MembershipStatus @default(ACTIVE)
+  enrolledAt       DateTime         @default(now())
+  completedAt      DateTime?
+  targetCadenceDay Int?
+  settings         Json?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module           Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, moduleId])
+  @@index([moduleId, status])
+}
+
+model UserModulePreference {
+  id               String   @id @default(cuid())
+  userId           String
+  moduleId         String
+  muted            Boolean  @default(false)
+  reminderHour     Int?
+  reminderWeekdays Json?
+  preferenceJson   Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module           Module   @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, moduleId])
+}
+
+model Event {
+  id         String    @id @default(cuid())
+  userId     String
+  moduleId   String
+  eventType  EventType
+  source     String?
+  title      String?
+  payload    Json
+  occurredAt DateTime
+  ingestedAt DateTime  @default(now())
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module     Module    @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@index([userId, occurredAt])
+  @@index([moduleId, occurredAt])
+  @@index([eventType, occurredAt])
+}
+
+model Insight {
+  id          String      @id @default(cuid())
+  userId      String
+  moduleId    String
+  kind        InsightKind
+  summary     String
+  score       Float?
+  evidence    Json?
+  windowStart DateTime?
+  windowEnd   DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime    @default(now())
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  module      Module      @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([moduleId, kind, createdAt])
+}
