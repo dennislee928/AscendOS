@@ -13,7 +13,7 @@ import (
 )
 
 func TestHealthz(t *testing.T) {
-	r := NewRouter()
+	r := NewRouter(nil)
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	w := httptest.NewRecorder()
 
@@ -25,7 +25,7 @@ func TestHealthz(t *testing.T) {
 }
 
 func TestHealthzAddsRequestID(t *testing.T) {
-	r := NewRouter()
+	r := NewRouter(nil)
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	req.Header.Set(requestIDHeader, "req-123")
 	w := httptest.NewRecorder()
@@ -42,7 +42,7 @@ func TestHealthzAddsRequestID(t *testing.T) {
 }
 
 func TestModulesListsCatalog(t *testing.T) {
-	r := NewRouter()
+	r := NewRouter(nil)
 	req := httptest.NewRequest(http.MethodGet, "/modules", nil)
 	w := httptest.NewRecorder()
 
@@ -75,7 +75,7 @@ func TestModulesListsCatalog(t *testing.T) {
 }
 
 func TestModulesGetByName(t *testing.T) {
-	r := NewRouter()
+	r := NewRouter(nil)
 	req := httptest.NewRequest(http.MethodGet, "/modules/argentum", nil)
 	w := httptest.NewRecorder()
 
@@ -101,7 +101,7 @@ func TestModulesGetByName(t *testing.T) {
 }
 
 func TestModulesGetByNameReturns404(t *testing.T) {
-	r := NewRouter()
+	r := NewRouter(nil)
 	req := httptest.NewRequest(http.MethodGet, "/modules/unknown", nil)
 	w := httptest.NewRecorder()
 
@@ -122,7 +122,7 @@ func TestModulesGetByNameReturns404(t *testing.T) {
 }
 
 func TestMeRequiresBearer(t *testing.T) {
-	r := NewRouter()
+	r := NewRouter(nil)
 	req := httptest.NewRequest(http.MethodGet, "/me", nil)
 	w := httptest.NewRecorder()
 
@@ -134,7 +134,7 @@ func TestMeRequiresBearer(t *testing.T) {
 }
 
 func TestMeRejectsBlankBearerToken(t *testing.T) {
-	r := NewRouter()
+	r := NewRouter(nil)
 	req := httptest.NewRequest(http.MethodGet, "/me", nil)
 	req.Header.Set("Authorization", "Bearer   ")
 	w := httptest.NewRecorder()
@@ -150,7 +150,7 @@ func TestMeAcceptsValidatedJWT(t *testing.T) {
 	secret := "test-secret"
 	setJWTEnv(t, secret, "https://issuer.example", "gateway", 30*time.Second)
 
-	r := NewRouter()
+	r := NewRouter(nil)
 
 	token := signJWT(t, secret, map[string]any{
 		"sub": "user-123",
@@ -186,7 +186,7 @@ func TestMeAcceptsValidatedJWT(t *testing.T) {
 func TestMeRejectsSignatureMismatch(t *testing.T) {
 	setJWTEnv(t, "correct-secret", "", "", 0)
 
-	r := NewRouter()
+	r := NewRouter(nil)
 	token := signJWT(t, "wrong-secret", map[string]any{
 		"sub": "user-123",
 		"exp": time.Now().UTC().Add(2 * time.Minute).Unix(),
@@ -206,7 +206,7 @@ func TestMeRejectsSignatureMismatch(t *testing.T) {
 func TestMeRejectsIssuerMismatch(t *testing.T) {
 	setJWTEnv(t, "test-secret", "https://issuer.example", "", 0)
 
-	r := NewRouter()
+	r := NewRouter(nil)
 	token := signJWT(t, "test-secret", map[string]any{
 		"sub": "user-123",
 		"iss": "https://issuer.example/other",
@@ -227,7 +227,7 @@ func TestMeRejectsIssuerMismatch(t *testing.T) {
 func TestMeRejectsAudienceMismatch(t *testing.T) {
 	setJWTEnv(t, "test-secret", "", "gateway", 0)
 
-	r := NewRouter()
+	r := NewRouter(nil)
 	token := signJWT(t, "test-secret", map[string]any{
 		"sub": "user-123",
 		"aud": []string{"metrics"},
@@ -248,7 +248,7 @@ func TestMeRejectsAudienceMismatch(t *testing.T) {
 func TestMeHonorsClockSkew(t *testing.T) {
 	setJWTEnv(t, "test-secret", "", "", 45*time.Second)
 
-	r := NewRouter()
+	r := NewRouter(nil)
 	token := signJWT(t, "test-secret", map[string]any{
 		"sub": "user-123",
 		"exp": time.Now().UTC().Add(-30 * time.Second).Unix(),
@@ -268,7 +268,7 @@ func TestMeHonorsClockSkew(t *testing.T) {
 func TestMeDefaultsMissingSubject(t *testing.T) {
 	setJWTEnv(t, "test-secret", "", "", 0)
 
-	r := NewRouter()
+	r := NewRouter(nil)
 	token := signJWT(t, "test-secret", map[string]any{
 		"exp": time.Now().UTC().Add(2 * time.Minute).Unix(),
 	})

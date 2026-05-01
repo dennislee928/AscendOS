@@ -11,7 +11,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 
 FROM gcr.io/distroless/cc-debian12:nonroot
 WORKDIR /app
-COPY --from=builder /src/target/release/orator /app/orator
+COPY --from=builder /src/services/orator/target/release/orator /app/orator
 LABEL io.ascendos.service="orator" \
       io.ascendos.runtime="rust" \
       io.ascendos.listen_port="8081"

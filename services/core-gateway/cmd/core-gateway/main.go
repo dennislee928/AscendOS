@@ -10,10 +10,17 @@ import (
 	"time"
 
 	"core-gateway/internal/httpapi"
+	natspub "core-gateway/internal/nats"
 )
 
 func main() {
-	router := httpapi.NewRouter()
+	pub, err := natspub.NewPublisher(os.Getenv("NATS_URL"))
+	if err != nil {
+		log.Fatalf("nats publisher: %v", err)
+	}
+	defer pub.Close()
+
+	router := httpapi.NewRouter(pub)
 
 	srv := &http.Server{
 		Addr:              ":8080",
