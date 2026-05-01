@@ -17,10 +17,15 @@ type Handler struct {
 }
 
 // NewHandler builds the Metis HTTP handler.
-func NewHandler(service string) http.Handler {
+func NewHandler(service, dataDir string) (http.Handler, error) {
+	store, err := domain.NewCardStore(dataDir)
+	if err != nil {
+		return nil, err
+	}
+
 	h := &Handler{
 		service: service,
-		store:   domain.NewCardStore(),
+		store:   store,
 		mux:     http.NewServeMux(),
 	}
 
@@ -28,7 +33,7 @@ func NewHandler(service string) http.Handler {
 	h.mux.HandleFunc("/cards", h.cards)
 	h.mux.HandleFunc("/cards/review", h.reviewCard)
 	h.mux.HandleFunc("/cards/due", h.dueCards)
-	return h
+	return h, nil
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {

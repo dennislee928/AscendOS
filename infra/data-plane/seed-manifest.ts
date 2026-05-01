@@ -28,6 +28,43 @@ export type SeedManifest = Readonly<{
   modules: readonly ModuleRecord[];
   documentSources: readonly DocumentSourceRecord[];
   qdrantCollection: string;
+  providerContracts: ProviderContractDefaults;
+}>;
+
+export type ProviderContractDefaults = Readonly<{
+  supabase: Readonly<{
+    SUPABASE_URL: string;
+    SUPABASE_ANON_KEY: string;
+    SUPABASE_SERVICE_ROLE_KEY: string;
+    DATABASE_URL: string;
+    DIRECT_URL: string;
+  }>;
+  qdrant: Readonly<{
+    QDRANT_URL: string;
+    QDRANT_API_KEY: string;
+    QDRANT_COLLECTION: string;
+    QDRANT_VECTOR_SIZE: string;
+    QDRANT_DISTANCE: string;
+  }>;
+  redis: Readonly<{
+    REDIS_URL: string;
+    REDIS_TLS: string;
+    REDIS_NAMESPACE: string;
+  }>;
+  mongodb: Readonly<{
+    MONGODB_URI: string;
+    MONGODB_DATABASE: string;
+    MONGODB_EVENTS_COLLECTION: string;
+    MONGODB_INSIGHTS_COLLECTION: string;
+  }>;
+  influx: Readonly<{
+    INFLUX_URL: string;
+    INFLUX_TOKEN: string;
+    INFLUX_ORG: string;
+    INFLUX_BUCKET: string;
+    INFLUX_MEASUREMENT_EVENTS: string;
+    INFLUX_MEASUREMENT_INSIGHTS: string;
+  }>;
 }>;
 
 const MODULE_RECORDS = [
@@ -150,6 +187,44 @@ const DOCUMENT_SOURCES = [
 
 const DEFAULT_QDRANT_COLLECTION = "self_improvement_docs" as const;
 
+const PROVIDER_CONTRACT_DEFAULTS = {
+  supabase: {
+    SUPABASE_URL: "https://<project-ref>.supabase.co",
+    SUPABASE_ANON_KEY: "<anon-key>",
+    SUPABASE_SERVICE_ROLE_KEY: "<service-role-key>",
+    DATABASE_URL:
+      "postgresql://postgres:password@db.<project-ref>.supabase.co:5432/postgres?pgbouncer=true&connection_limit=1",
+    DIRECT_URL: "postgresql://postgres:password@db.<project-ref>.supabase.co:5432/postgres",
+  },
+  qdrant: {
+    QDRANT_URL: "https://<cluster-id>.<region>.aws.cloud.qdrant.io:6333",
+    QDRANT_API_KEY: "<qdrant-api-key>",
+    QDRANT_COLLECTION: DEFAULT_QDRANT_COLLECTION,
+    QDRANT_VECTOR_SIZE: "384",
+    QDRANT_DISTANCE: "Cosine",
+  },
+  redis: {
+    REDIS_URL: "rediss://default:<password>@<host>:<port>",
+    REDIS_TLS: "true",
+    REDIS_NAMESPACE: "ascendos",
+  },
+  mongodb: {
+    MONGODB_URI:
+      "mongodb+srv://<user>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority",
+    MONGODB_DATABASE: "ascendos",
+    MONGODB_EVENTS_COLLECTION: "module_events",
+    MONGODB_INSIGHTS_COLLECTION: "module_insights",
+  },
+  influx: {
+    INFLUX_URL: "https://<region>.aws.cloud2.influxdata.com",
+    INFLUX_TOKEN: "<influx-token>",
+    INFLUX_ORG: "<influx-org>",
+    INFLUX_BUCKET: "ascendos_events",
+    INFLUX_MEASUREMENT_EVENTS: "module_events",
+    INFLUX_MEASUREMENT_INSIGHTS: "module_insights",
+  },
+} as const satisfies ProviderContractDefaults;
+
 function assertUnique(values: readonly string[], label: string): void {
   const seen = new Set<string>();
 
@@ -200,6 +275,7 @@ export function createSeedManifest(): SeedManifest {
     modules: MODULE_RECORDS,
     documentSources: DOCUMENT_SOURCES,
     qdrantCollection: DEFAULT_QDRANT_COLLECTION,
+    providerContracts: PROVIDER_CONTRACT_DEFAULTS,
   };
 }
 

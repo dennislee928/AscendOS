@@ -1,8 +1,12 @@
 package domain
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"math"
+	"os"
+	"path/filepath"
 	"sort"
 	"sync"
 	"time"
@@ -29,15 +33,27 @@ type ReviewResult struct {
 	NextDueAt        time.Time `json:"next_due_at"`
 }
 
-// CardStore keeps cards in memory for the scheduler endpoints.
+// CardStore keeps a file-backed card collection for the scheduler endpoints.
 type CardStore struct {
-	mu    sync.Mutex
-	cards map[string]Card
+	mu       sync.Mutex
+	dataPath string
+	cards    map[string]Card
 }
 
-// NewCardStore constructs an empty card store.
-func NewCardStore() *CardStore {
-	return &CardStore{cards: make(map[string]Card)}
+// NewCardStore loads cards from the configured data directory.
+func NewCardStore(dataDir string) (*CardStore, error) {
+	if dataDir == "" {
+		return nil, errors.New("data dir is required")
+	}
+
+	store := &CardStore{
+		dataPath: filepath.Join(dataDir, "cards.json"),
+		cards:    make(map[string]Card),
+	}
+	if err := store.load(); err != nil {
+		return nil, err
+	}
+	return store, nil
 }
 
 // Upsert stores or replaces a card definition.
@@ -55,7 +71,12 @@ func (s *CardStore) Upsert(card Card) (Card, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.cards[card.ID] = card
+	next := cloneCards(s.cards)
+	next[card.ID] = card
+	if err := s.persistLocked(next); err != nil {
+		return Card{}, err
+	}
+	s.cards = next
 	return card, nil
 }
 
@@ -74,7 +95,12 @@ func (s *CardStore) Review(id string, quality int, at time.Time) (ReviewResult, 
 		return ReviewResult{}, err
 	}
 
-	s.cards[id] = updated
+	next := cloneCards(s.cards)
+	next[id] = updated
+	if err := s.persistLocked(next); err != nil {
+		return ReviewResult{}, err
+	}
+	s.cards = next
 	result.Card = updated
 	return result, nil
 }
@@ -146,4 +172,55 @@ func applyReview(card Card, quality int, at time.Time) (Card, ReviewResult, erro
 		NextDueAt:        card.DueAt,
 	}
 	return card, result, nil
+}
+
+func cloneCards(cards map[string]Card) map[string]Card {
+	next := make(map[string]Card, len(cards))
+	for id, card := range cards {
+		next[id] = card
+	}
+	return next
+}
+
+func (s *CardStore) load() error {
+	data, err := os.ReadFile(s.dataPath)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	data = bytes.TrimSpace(data)
+	if len(data) == 0 {
+		return nil
+	}
+
+	var snapshot struct {
+		Cards map[string]Card `json:"cards"`
+	}
+	if err := json.Unmarshal(data, &snapshot); err != nil {
+		return err
+	}
+	if snapshot.Cards == nil {
+		snapshot.Cards = make(map[string]Card)
+	}
+	s.cards = cloneCards(snapshot.Cards)
+	return nil
+}
+
+func (s *CardStore) persistLocked(cards map[string]Card) error {
+	if err := os.MkdirAll(filepath.Dir(s.dataPath), 0o755); err != nil {
+		return err
+	}
+
+	payload, err := json.Marshal(struct {
+		Cards map[string]Card `json:"cards"`
+	}{
+		Cards: cards,
+	})
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(s.dataPath, payload, 0o644)
 }

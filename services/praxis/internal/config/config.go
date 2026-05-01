@@ -11,6 +11,7 @@ type Config struct {
 	ServiceName       string
 	HTTPAddr          string
 	ReadHeaderTimeout time.Duration
+	DataDir           string
 }
 
 // Load reads environment variables with safe defaults.
@@ -19,5 +20,6 @@ func Load() Config {
 		ServiceName:       envutil.String("PRAXIS_SERVICE_NAME", "praxis"),
 		HTTPAddr:          envutil.String("PRAXIS_HTTP_ADDR", ":8082"),
 		ReadHeaderTimeout: envutil.Duration("PRAXIS_READ_HEADER_TIMEOUT", 5*time.Second),
+		DataDir:           envutil.String("PRAXIS_DATA_DIR", "./data"),
 	}
 }

@@ -15,6 +15,7 @@ const requestIDHeader = "X-Request-Id"
 
 func NewRouter() *gin.Engine {
 	catalog := newModuleCatalog()
+	authConfig := auth.LoadConfigFromEnv()
 
 	r := gin.New()
 	r.Use(requestIDMiddleware(), gin.Logger(), gin.Recovery())
@@ -58,13 +59,14 @@ func NewRouter() *gin.Engine {
 			return
 		}
 
-		claims, err := auth.ParseJWTStub(token)
+		claims, err := auth.ParseJWT(token, authConfig)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 			return
 		}
 
-		if _, ok := claims["sub"]; !ok {
+		sub, ok := claims["sub"].(string)
+		if !ok || strings.TrimSpace(sub) == "" {
 			claims["sub"] = "unknown"
 		}
 

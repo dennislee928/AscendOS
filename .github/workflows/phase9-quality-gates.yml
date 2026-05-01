@@ -18,6 +18,7 @@ concurrency:
 
 env:
   QUALITY_GATES_STRICT: "0"
+  QUALITY_GATES_COVERAGE_THRESHOLD: "80"
 
 jobs:
   unit-coverage:
@@ -57,7 +58,7 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Coverage gate scaffold (80% target)
+      - name: Coverage gate
         run: |
           chmod +x scripts/ci/coverage-gate-placeholder.sh
           scripts/ci/coverage-gate-placeholder.sh "${{ matrix.language }}"
@@ -75,7 +76,10 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Schemathesis scaffold
+      - name: Schemathesis contract gate
+        env:
+          OPENAPI_SPEC_PATH: services/core-gateway/api/openapi.yaml
+          SCHEMATHESIS_BASE_URL: ${{ vars.SCHEMATHESIS_BASE_URL }}
         run: |
           chmod +x scripts/ci/run-schemathesis-placeholder.sh
           scripts/ci/run-schemathesis-placeholder.sh --ci
@@ -109,7 +113,9 @@ jobs:
         with:
           node-version: "20"
 
-      - name: E2E scaffold
+      - name: E2E smoke gate
+        env:
+          E2E_BASE_URL: ${{ vars.E2E_BASE_URL }}
         run: |
           chmod +x scripts/ci/run-e2e-placeholder.sh
           scripts/ci/run-e2e-placeholder.sh --ci
@@ -141,7 +147,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Launch checklist scaffold
+      - name: Launch checklist gate
         run: |
           if grep -n '^- \[ \]' docs/qa/launch-checklist-phase9.md; then
             echo "Launch checklist still has incomplete items."
@@ -153,4 +159,4 @@ jobs:
             echo "Replace every TODO(owner): marker in docs/qa/launch-checklist-phase9.md before launch readiness can pass."
             exit 1
           fi
-          echo "Launch readiness scaffold passed."
+          echo "Launch readiness gate passed."

@@ -83,7 +83,7 @@ paths:
   /me:
     get:
       operationId: me
-      summary: Return claims from bearer token (stub)
+      summary: Return validated claims from bearer token
       security:
         - bearerAuth: []
       responses:

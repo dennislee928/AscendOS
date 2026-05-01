@@ -1,8 +1,12 @@
 package domain
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"math"
+	"os"
+	"path/filepath"
 	"sort"
 	"sync"
 	"time"
@@ -29,15 +33,27 @@ type RelapseForecast struct {
 	LongestStreak int       `json:"longest_streak_days"`
 }
 
-// StreakStore keeps habit streaks in memory for forecast endpoints.
+// StreakStore keeps a file-backed collection of habit streaks for forecast endpoints.
 type StreakStore struct {
-	mu      sync.Mutex
-	streaks map[string]HabitStreak
+	mu       sync.Mutex
+	dataPath string
+	streaks  map[string]HabitStreak
 }
 
-// NewStreakStore constructs an empty streak store.
-func NewStreakStore() *StreakStore {
-	return &StreakStore{streaks: make(map[string]HabitStreak)}
+// NewStreakStore loads habit streaks from the configured data directory.
+func NewStreakStore(dataDir string) (*StreakStore, error) {
+	if dataDir == "" {
+		return nil, errors.New("data dir is required")
+	}
+
+	store := &StreakStore{
+		dataPath: filepath.Join(dataDir, "habit-streaks.json"),
+		streaks:  make(map[string]HabitStreak),
+	}
+	if err := store.load(); err != nil {
+		return nil, err
+	}
+	return store, nil
 }
 
 // Upsert stores or replaces a habit streak definition.
@@ -55,7 +71,12 @@ func (s *StreakStore) Upsert(streak HabitStreak) (HabitStreak, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.streaks[streak.HabitID] = streak
+	next := cloneStreaks(s.streaks)
+	next[streak.HabitID] = streak
+	if err := s.persistLocked(next); err != nil {
+		return HabitStreak{}, err
+	}
+	s.streaks = next
 	return streak, nil
 }
 
@@ -164,4 +185,55 @@ func uniqueDrivers(values []string) []string {
 		}
 	}
 	return out
+}
+
+func cloneStreaks(streaks map[string]HabitStreak) map[string]HabitStreak {
+	next := make(map[string]HabitStreak, len(streaks))
+	for habitID, streak := range streaks {
+		next[habitID] = streak
+	}
+	return next
+}
+
+func (s *StreakStore) load() error {
+	data, err := os.ReadFile(s.dataPath)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	data = bytes.TrimSpace(data)
+	if len(data) == 0 {
+		return nil
+	}
+
+	var snapshot struct {
+		Streaks map[string]HabitStreak `json:"streaks"`
+	}
+	if err := json.Unmarshal(data, &snapshot); err != nil {
+		return err
+	}
+	if snapshot.Streaks == nil {
+		snapshot.Streaks = make(map[string]HabitStreak)
+	}
+	s.streaks = cloneStreaks(snapshot.Streaks)
+	return nil
+}
+
+func (s *StreakStore) persistLocked(streaks map[string]HabitStreak) error {
+	if err := os.MkdirAll(filepath.Dir(s.dataPath), 0o755); err != nil {
+		return err
+	}
+
+	payload, err := json.Marshal(struct {
+		Streaks map[string]HabitStreak `json:"streaks"`
+	}{
+		Streaks: streaks,
+	})
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(s.dataPath, payload, 0o644)
 }

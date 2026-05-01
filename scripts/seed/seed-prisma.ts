@@ -3,49 +3,40 @@
  * TODO: wire PrismaClient once workspace package manager/tooling is finalized.
  */
 
-import { requireEnvSet } from "./env";
-import { seedManifest } from "../../infra/data-plane/seed-manifest";
+import { resolveRuntimeConfig, type RuntimeConfig } from "./env";
 
-type SeedContext = {
-  databaseUrl?: string;
-  directUrl?: string;
-};
+type SeedContext = Readonly<{
+  config: RuntimeConfig;
+}>;
 
-async function seedModules(_ctx: SeedContext): Promise<void> {
-  // Placeholder: upsert module catalog into relational store.
-  console.log(`[seed-prisma] would seed ${seedManifest.modules.length} modules`);
+function summarizeConnectionString(value: string): string {
+  return value.replace(/\/\/([^/@]+)@/, "//***@").replace(/\?.*$/, "");
 }
 
-async function seedSampleUser(_ctx: SeedContext): Promise<void> {
-  // Placeholder: create default user and baseline memberships.
-  console.log("[seed-prisma] would seed baseline user + memberships");
+async function seedModules(ctx: SeedContext): Promise<void> {
+  const { supabase } = ctx.config.providers;
+  console.log(
+    `[seed-prisma] would seed ${ctx.config.manifest.modules.length} modules into ${summarizeConnectionString(supabase.databaseUrl)}`,
+  );
+}
+
+async function seedSampleUser(ctx: SeedContext): Promise<void> {
+  const { supabase } = ctx.config.providers;
+  console.log(
+    `[seed-prisma] would seed baseline user + memberships against ${summarizeConnectionString(supabase.directUrl)}`,
+  );
 }
 
 async function main(): Promise<void> {
-  const env = requireEnvSet("seed-prisma", [
-    {
-      name: "DATABASE_URL",
-      templatePath:
-        "infra/data-plane/providers/supabase.env.template or packages/prisma/.env.example",
-    },
-    {
-      name: "DIRECT_URL",
-      templatePath:
-        "infra/data-plane/providers/supabase.env.template or packages/prisma/.env.example",
-    },
-  ]);
-  const ctx: SeedContext = {
-    databaseUrl: env.DATABASE_URL,
-    directUrl: env.DIRECT_URL,
-  };
+  const config = resolveRuntimeConfig();
   console.log(
-    "[seed-prisma] env check passed for DATABASE_URL and DIRECT_URL; Prisma schema is ready for the relational bootstrap step",
+    `[seed-prisma] resolved runtime config for ${Object.keys(config.providers).length} provider contracts`,
   );
   console.log(
-    `[seed-prisma] canonical manifest loaded with ${seedManifest.modules.length} modules and ${seedManifest.documentSources.length} document sources`,
+    `[seed-prisma] canonical manifest loaded with ${config.manifest.modules.length} modules and ${config.manifest.documentSources.length} document sources`,
   );
-  await seedModules(ctx);
-  await seedSampleUser(ctx);
+  await seedModules({ config });
+  await seedSampleUser({ config });
   console.log("[seed-prisma] placeholder completed");
 }
 

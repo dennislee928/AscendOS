@@ -8,7 +8,10 @@ import (
 )
 
 func TestHandlerStoresStreakAndReturnsForecast(t *testing.T) {
-	handler := NewHandler("praxis")
+	handler, err := NewHandler("praxis", t.TempDir())
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
 
 	createReq := httptest.NewRequest(http.MethodPost, "/habit-streaks", strings.NewReader(`{
 		"id":"streak-1",
@@ -36,7 +39,10 @@ func TestHandlerStoresStreakAndReturnsForecast(t *testing.T) {
 }
 
 func TestHandlerRejectsMissingHabitID(t *testing.T) {
-	handler := NewHandler("praxis")
+	handler, err := NewHandler("praxis", t.TempDir())
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
 
 	req := httptest.NewRequest(http.MethodGet, "/relapse-risk", nil)
 	rec := httptest.NewRecorder()
@@ -48,7 +54,10 @@ func TestHandlerRejectsMissingHabitID(t *testing.T) {
 }
 
 func TestHandlerListsHabitStreaks(t *testing.T) {
-	handler := NewHandler("praxis")
+	handler, err := NewHandler("praxis", t.TempDir())
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
 
 	req := httptest.NewRequest(http.MethodPost, "/habit-streaks", strings.NewReader(`{
 		"id":"streak-2",
@@ -72,5 +81,41 @@ func TestHandlerListsHabitStreaks(t *testing.T) {
 	}
 	if body := listRec.Body.String(); !strings.Contains(body, `"habit_streaks"`) {
 		t.Fatalf("GET /habit-streaks body = %s, want streak list", body)
+	}
+}
+
+func TestHandlerReloadsPersistedHabitStreaks(t *testing.T) {
+	dataDir := t.TempDir()
+
+	handler, err := NewHandler("praxis", dataDir)
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+	createReq := httptest.NewRequest(http.MethodPost, "/habit-streaks", strings.NewReader(`{
+		"id":"streak-2",
+		"habit_id":"habit-2",
+		"current_streak_days":8,
+		"longest_streak_days":11,
+		"missed_days_last_7":0
+	}`))
+	createRec := httptest.NewRecorder()
+	handler.ServeHTTP(createRec, createReq)
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("POST /habit-streaks status = %d, want %d", createRec.Code, http.StatusCreated)
+	}
+
+	reloaded, err := NewHandler("praxis", dataDir)
+	if err != nil {
+		t.Fatalf("NewHandler() reload error = %v", err)
+	}
+	forecastReq := httptest.NewRequest(http.MethodGet, "/relapse-risk?habit_id=habit-2&at=2026-05-01T09:00:00Z", nil)
+	forecastRec := httptest.NewRecorder()
+	reloaded.ServeHTTP(forecastRec, forecastReq)
+
+	if forecastRec.Code != http.StatusOK {
+		t.Fatalf("GET /relapse-risk status = %d, want %d", forecastRec.Code, http.StatusOK)
+	}
+	if body := forecastRec.Body.String(); !strings.Contains(body, `"habit_id":"habit-2"`) {
+		t.Fatalf("GET /relapse-risk body = %s, want persisted habit", body)
 	}
 }
