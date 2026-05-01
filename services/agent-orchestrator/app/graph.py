@@ -29,7 +29,19 @@ class PlaceholderLangGraph:
         self._nodes = nodes
 
     def invoke(self, state: OrchestratorState) -> OrchestratorState:
+        if "goal" not in state or not state["goal"]:
+            raise ValueError("orchestrator state requires a non-empty goal")
+        if "modules" not in state or not isinstance(state["modules"], list):
+            raise ValueError("orchestrator state requires a module list")
+        if "outputs" not in state or not isinstance(state["outputs"], dict):
+            raise ValueError("orchestrator state requires an outputs mapping")
+
+        # Work on a shallow copy so nodes cannot accidentally mutate caller-owned state.
+        state = {
+            "goal": state["goal"],
+            "modules": list(state["modules"]),
+            "outputs": dict(state["outputs"]),
+        }
         for node in self._nodes:
             state = node.run(state)
         return state
-

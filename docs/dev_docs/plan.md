@@ -296,7 +296,16 @@ Main agent inspected this plan, split work into 9 phase-owned tracks with non-ov
 - [x] phase 9 - quality-gate/launch scaffolds implemented (CI workflow, schemathesis/e2e placeholder scripts, QA/docs checklist artifacts).
 
 Current state:
-All 9 requested phases are now scaffolded in-repo. Remaining work is to replace placeholders with production logic, wire real credentials/providers, and enforce strict CI gates.
+All 9 requested phases are now scaffolded in-repo, and several phase-owned hardening passes landed on top of the scaffolds:
+- `core-gateway` bearer parsing now rejects blank tokens.
+- Seed scripts fail fast on missing data-plane env vars.
+- Go module scaffolds include config and MCP registry tests.
+- Python request/response models and orchestrator state handling are stricter.
+- Phase 7 alert rules now include collector and Jaeger coverage.
+- Phase 8 k3s placeholders include pod security defaults and probes.
+- Phase 9 launch readiness now fails on unchecked checklist items.
+
+Remaining work is still to replace placeholders with production logic, wire real credentials/providers, and keep tightening CI gates as the implementation hardens.
 
 ---
 

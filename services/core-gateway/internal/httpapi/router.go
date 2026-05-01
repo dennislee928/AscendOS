@@ -32,6 +32,11 @@ func NewRouter() *gin.Engine {
 		}
 
 		token := strings.TrimPrefix(authz, "Bearer ")
+		if token == "" || strings.TrimSpace(token) != token {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid bearer token"})
+			return
+		}
+
 		claims, err := auth.ParseJWTStub(token)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})

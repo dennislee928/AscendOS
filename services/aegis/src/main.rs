@@ -1,11 +1,26 @@
 mod pipeline;
 
-use axum::{extract::Json, routing::{get, post}, Router};
+use axum::{
+    extract::Json,
+    http::StatusCode,
+    routing::{get, post},
+    Router,
+};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 struct AnalyzeTextRequest {
     text: String,
+}
+
+impl AnalyzeTextRequest {
+    fn validate(&self) -> Result<(), &'static str> {
+        if self.text.trim().is_empty() {
+            Err("text must not be empty")
+        } else {
+            Ok(())
+        }
+    }
 }
 
 #[tokio::main]
@@ -26,7 +41,35 @@ async fn healthz() -> &'static str {
     "ok"
 }
 
-async fn analyze_text(Json(payload): Json<AnalyzeTextRequest>) -> Json<pipeline::TextAnalysisResult> {
+async fn analyze_text(
+    Json(payload): Json<AnalyzeTextRequest>,
+) -> Result<Json<pipeline::TextAnalysisResult>, (StatusCode, &'static str)> {
+    payload
+        .validate()
+        .map_err(|message| (StatusCode::BAD_REQUEST, message))?;
     let result = pipeline::analyze_text(&payload.text).await;
-    Json(result)
+    Ok(Json(result))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AnalyzeTextRequest;
+
+    #[test]
+    fn rejects_blank_text() {
+        let request = AnalyzeTextRequest {
+            text: "   ".to_string(),
+        };
+
+        assert!(request.validate().is_err());
+    }
+
+    #[test]
+    fn accepts_non_empty_text() {
+        let request = AnalyzeTextRequest {
+            text: "hello world".to_string(),
+        };
+
+        assert!(request.validate().is_ok());
+    }
 }

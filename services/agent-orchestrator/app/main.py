@@ -1,7 +1,7 @@
 from typing import Any, Literal
 
 from fastapi import FastAPI
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .graph import GraphNode, OrchestratorState, PlaceholderLangGraph
 
@@ -11,14 +11,27 @@ ModuleName = Literal["neuro", "argentum", "kairos"]
 
 
 class OrchestrateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     goal: str = Field(min_length=1, description="User goal to route through module agents")
     modules: list[ModuleName] = Field(
         default_factory=lambda: ["neuro", "argentum", "kairos"],
         description="Requested modules in execution order",
     )
 
+    @field_validator("modules")
+    @classmethod
+    def validate_modules(cls, modules: list[ModuleName]) -> list[ModuleName]:
+        if len(modules) != len(set(modules)):
+            raise ValueError("modules must not contain duplicates")
+        if not modules:
+            raise ValueError("modules must include at least one service")
+        return modules
+
 
 class OrchestrateResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     goal: str
     modules: list[ModuleName]
     outputs: dict[str, Any]
@@ -88,4 +101,3 @@ def orchestrate(payload: OrchestrateRequest) -> OrchestrateResponse:
     }
     final = _build_graph().invoke(state)
     return OrchestrateResponse(goal=payload.goal, modules=payload.modules, outputs=final["outputs"])
-

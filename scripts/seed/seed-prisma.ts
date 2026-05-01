@@ -5,6 +5,7 @@
 
 type SeedContext = {
   databaseUrl?: string;
+  directUrl?: string;
 };
 
 const MODULES = [
@@ -18,6 +19,16 @@ const MODULES = [
   { key: "PRAXIS", name: "praxis" },
 ] as const;
 
+function requireEnv(name: string, value: string | undefined): string {
+  if (!value) {
+    throw new Error(
+      `[seed-prisma] missing ${name}. Copy infra/data-plane/.env.template or packages/prisma/.env.example and set ${name} before running this seed.`,
+    );
+  }
+
+  return value;
+}
+
 async function seedModules(_ctx: SeedContext): Promise<void> {
   // Placeholder: upsert module catalog into relational store.
   console.log(`[seed-prisma] would seed ${MODULES.length} modules`);
@@ -29,7 +40,13 @@ async function seedSampleUser(_ctx: SeedContext): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  const ctx: SeedContext = { databaseUrl: process.env.DATABASE_URL };
+  const ctx: SeedContext = {
+    databaseUrl: requireEnv("DATABASE_URL", process.env.DATABASE_URL),
+    directUrl: requireEnv("DIRECT_URL", process.env.DIRECT_URL),
+  };
+  console.log(
+    "[seed-prisma] env check passed for DATABASE_URL and DIRECT_URL; Prisma schema is ready for the relational bootstrap step",
+  );
   await seedModules(ctx);
   await seedSampleUser(ctx);
   console.log("[seed-prisma] placeholder completed");

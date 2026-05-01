@@ -127,11 +127,9 @@ jobs:
 
       - name: Launch checklist scaffold
         run: |
-          if grep -q "TODO(owner):" docs/qa/launch-checklist-phase9.md; then
-            echo "Launch checklist still contains TODO markers."
-            if [ "${QUALITY_GATES_STRICT}" = "1" ]; then
-              echo "QUALITY_GATES_STRICT=1; failing launch-readiness."
-              exit 1
-            fi
+          if grep -n '^- \[ \]' docs/qa/launch-checklist-phase9.md; then
+            echo "Launch checklist still has incomplete items."
+            echo "Complete every checkbox in docs/qa/launch-checklist-phase9.md before launch readiness can pass."
+            exit 1
           fi
           echo "Launch readiness scaffold passed."

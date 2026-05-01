@@ -1,18 +1,23 @@
 from fastapi import FastAPI
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+from typing import Literal
 
 app = FastAPI(title="argentum", version="0.1.0")
 
 
 class RiskEvaluateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     amount: float = Field(gt=0, description="Requested amount")
     tenor_days: int = Field(gt=0, description="Duration in days")
     counterparty_tier: int = Field(ge=1, le=5, description="1 is strongest, 5 is weakest")
 
 
 class RiskEvaluateResponse(BaseModel):
-    risk_score: float
-    band: str
+    model_config = ConfigDict(extra="forbid")
+
+    risk_score: float = Field(ge=0.0, le=1.0)
+    band: Literal["low", "medium", "high"]
 
 
 @app.get("/healthz")
@@ -34,4 +39,3 @@ def evaluate_risk(payload: RiskEvaluateRequest) -> RiskEvaluateResponse:
         band = "high"
     # TODO: Replace deterministic placeholder with policy/rules engine + model-assisted scoring.
     return RiskEvaluateResponse(risk_score=score, band=band)
-

@@ -20,14 +20,42 @@ spec:
       labels:
         app: neuro
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: neuro
           image: ghcr.io/your-org/ascendos-neuro:placeholder
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 7860
+              name: http
           env:
             - name: PYTHONUNBUFFERED
               value: "1"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
 ---
 apiVersion: v1
 kind: Service

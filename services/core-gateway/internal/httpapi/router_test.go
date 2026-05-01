@@ -32,6 +32,19 @@ func TestMeRequiresBearer(t *testing.T) {
 	}
 }
 
+func TestMeRejectsBlankBearerToken(t *testing.T) {
+	r := NewRouter()
+	req := httptest.NewRequest(http.MethodGet, "/me", nil)
+	req.Header.Set("Authorization", "Bearer   ")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", w.Code)
+	}
+}
+
 func TestMeAcceptsStubJWT(t *testing.T) {
 	r := NewRouter()
 

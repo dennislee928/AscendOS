@@ -7,6 +7,7 @@ This note records the minimum docs pipeline expectations for launch readiness.
 - CI workflow includes job `docs-quality` in:
   - `.github/workflows/phase9-quality-gates.yml`
 - `docs-quality` currently checks that required Phase 9 docs exist.
+- `launch-readiness` fails if `docs/qa/launch-checklist-phase9.md` still contains any unchecked checklist item.
 
 ## Required Docs Artifacts
 

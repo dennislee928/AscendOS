@@ -1,6 +1,11 @@
 mod pipeline;
 
-use axum::{extract::Json, routing::{get, post}, Router};
+use axum::{
+    extract::Json,
+    http::StatusCode,
+    routing::{get, post},
+    Router,
+};
 
 #[tokio::main]
 async fn main() {
@@ -22,7 +27,37 @@ async fn healthz() -> &'static str {
 
 async fn analyze_prosody(
     Json(payload): Json<pipeline::ProsodyInput>,
-) -> Json<pipeline::ProsodyResult> {
+) -> Result<Json<pipeline::ProsodyResult>, (StatusCode, &'static str)> {
+    payload
+        .validate()
+        .map_err(|message| (StatusCode::BAD_REQUEST, message))?;
     let result = pipeline::analyze_prosody(payload).await;
-    Json(result)
+    Ok(Json(result))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::pipeline::ProsodyInput;
+
+    #[test]
+    fn rejects_blank_transcript() {
+        let input = ProsodyInput {
+            transcript: Some("  ".to_string()),
+            sample_rate_hz: Some(16_000),
+            duration_ms: Some(2500),
+        };
+
+        assert!(input.validate().is_err());
+    }
+
+    #[test]
+    fn accepts_minimal_payload() {
+        let input = ProsodyInput {
+            transcript: None,
+            sample_rate_hz: None,
+            duration_ms: None,
+        };
+
+        assert!(input.validate().is_ok());
+    }
 }
