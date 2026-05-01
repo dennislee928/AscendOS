@@ -10,8 +10,9 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 COPY services/chronos ./services/chronos
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
+    cd services/chronos && \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build -trimpath -ldflags='-s -w' -o /out/chronos ./services/chronos/cmd/chronos
+    go build -trimpath -ldflags='-s -w' -o /out/chronos ./cmd/chronos
 
 FROM gcr.io/distroless/static-debian12:nonroot
 WORKDIR /app

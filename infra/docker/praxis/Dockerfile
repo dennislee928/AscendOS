@@ -11,8 +11,9 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 COPY services/praxis ./services/praxis
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
+    cd services/praxis && \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build -trimpath -ldflags='-s -w' -o /out/praxis ./services/praxis/cmd/praxis
+    go build -trimpath -ldflags='-s -w' -o /out/praxis ./cmd/praxis
 
 FROM gcr.io/distroless/static-debian12:nonroot
 WORKDIR /app

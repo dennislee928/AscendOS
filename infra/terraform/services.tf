@@ -62,7 +62,7 @@ module "chronos" {
   health_check_path = "/healthz"
 
   env_vars = merge(local.data_env, {
-    PORT = "8081"
+    PORT = "8080"
   })
 
   depends_on = [
@@ -84,7 +84,7 @@ module "metis" {
   health_check_path = "/healthz"
 
   env_vars = merge(local.data_env, {
-    PORT = "8082"
+    PORT = "8081"
   })
 
   depends_on = [
@@ -106,7 +106,7 @@ module "praxis" {
   health_check_path = "/healthz"
 
   env_vars = merge(local.data_env, {
-    PORT = "8083"
+    PORT = "8082"
   })
 
   depends_on = [
@@ -155,7 +155,7 @@ module "orator" {
   health_check_path = "/healthz"
 
   env_vars = merge(local.data_env, {
-    PORT     = "8085"
+    PORT     = "8081"
     RUST_LOG = "info"
   })
 
@@ -204,7 +204,7 @@ module "argentum" {
   health_check_path = "/healthz"
 
   env_vars = merge(local.data_env, {
-    PORT = "7861"
+    PORT = "7860"
   })
 
   depends_on = [
@@ -226,7 +226,7 @@ module "kairos" {
   health_check_path = "/healthz"
 
   env_vars = merge(local.data_env, {
-    PORT = "7862"
+    PORT = "7860"
   })
 
   depends_on = [
@@ -248,8 +248,8 @@ module "agent_orchestrator" {
   health_check_path = "/healthz"
 
   env_vars = merge(local.data_env, {
-    PORT               = "7863"
-    ORCHESTRATOR_PORT  = "7863"
+    PORT               = "7860"
+    ORCHESTRATOR_PORT  = "7860"
   })
 
   depends_on = [
