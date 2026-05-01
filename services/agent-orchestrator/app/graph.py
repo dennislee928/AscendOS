@@ -1,11 +1,7 @@
 from dataclasses import dataclass
-from typing import Any, Callable, TypedDict
+from typing import Callable
 
-
-class OrchestratorState(TypedDict):
-    goal: str
-    modules: list[str]
-    outputs: dict[str, Any]
+from .contracts import OrchestratorState, build_orchestrator_state
 
 
 NodeFn = Callable[[OrchestratorState], OrchestratorState]
@@ -29,19 +25,15 @@ class PlaceholderLangGraph:
         self._nodes = nodes
 
     def invoke(self, state: OrchestratorState) -> OrchestratorState:
-        if "goal" not in state or not state["goal"]:
-            raise ValueError("orchestrator state requires a non-empty goal")
-        if "modules" not in state or not isinstance(state["modules"], list):
+        goal = state.get("goal", "")
+        modules = state.get("modules")
+        outputs = state.get("outputs")
+        if not isinstance(modules, list):
             raise ValueError("orchestrator state requires a module list")
-        if "outputs" not in state or not isinstance(state["outputs"], dict):
+        if not isinstance(outputs, dict):
             raise ValueError("orchestrator state requires an outputs mapping")
 
-        # Work on a shallow copy so nodes cannot accidentally mutate caller-owned state.
-        state = {
-            "goal": state["goal"],
-            "modules": list(state["modules"]),
-            "outputs": dict(state["outputs"]),
-        }
+        state = build_orchestrator_state(goal, modules, outputs)
         for node in self._nodes:
             state = node.run(state)
         return state

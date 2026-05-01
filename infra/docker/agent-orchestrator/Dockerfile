@@ -10,6 +10,7 @@ COPY services/agent-orchestrator/app ./app
 FROM gcr.io/distroless/python3-debian12:nonroot
 WORKDIR /app
 ENV PYTHONPATH=/opt/python:/app
+ENV PYTHONUNBUFFERED=1
 COPY --from=builder /opt/python /opt/python
 COPY --from=builder /workspace/app /app/app
 EXPOSE 7860

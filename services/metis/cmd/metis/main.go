@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"time"
 
 	"metis/internal/config"
 )
@@ -29,7 +28,7 @@ func main() {
 	server := &http.Server{
 		Addr:              cfg.HTTPAddr,
 		Handler:           mux,
-		ReadHeaderTimeout: 5 * time.Second,
+		ReadHeaderTimeout: cfg.ReadHeaderTimeout,
 	}
 
 	log.Printf("%s listening on %s", cfg.ServiceName, cfg.HTTPAddr)

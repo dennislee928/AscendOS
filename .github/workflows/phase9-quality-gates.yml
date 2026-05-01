@@ -132,4 +132,9 @@ jobs:
             echo "Complete every checkbox in docs/qa/launch-checklist-phase9.md before launch readiness can pass."
             exit 1
           fi
+          if grep -n 'TODO(owner):' docs/qa/launch-checklist-phase9.md; then
+            echo "Launch checklist still contains owner placeholders."
+            echo "Replace every TODO(owner): marker in docs/qa/launch-checklist-phase9.md before launch readiness can pass."
+            exit 1
+          fi
           echo "Launch readiness scaffold passed."

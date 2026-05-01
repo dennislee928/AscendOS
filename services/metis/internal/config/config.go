@@ -1,25 +1,23 @@
 package config
 
-import "os"
+import (
+	"time"
+
+	"chronos/envutil"
+)
 
 // Config contains Metis runtime settings loaded from environment variables.
 type Config struct {
-	ServiceName string
-	HTTPAddr    string
+	ServiceName       string
+	HTTPAddr          string
+	ReadHeaderTimeout time.Duration
 }
 
 // Load reads environment variables with safe defaults.
 func Load() Config {
 	return Config{
-		ServiceName: getenv("METIS_SERVICE_NAME", "metis"),
-		HTTPAddr:    getenv("METIS_HTTP_ADDR", ":8081"),
+		ServiceName:       envutil.String("METIS_SERVICE_NAME", "metis"),
+		HTTPAddr:          envutil.String("METIS_HTTP_ADDR", ":8081"),
+		ReadHeaderTimeout: envutil.Duration("METIS_READ_HEADER_TIMEOUT", 5*time.Second),
 	}
-}
-
-func getenv(key, fallback string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		return fallback
-	}
-	return value
 }

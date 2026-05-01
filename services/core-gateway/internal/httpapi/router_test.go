@@ -20,6 +20,23 @@ func TestHealthz(t *testing.T) {
 	}
 }
 
+func TestHealthzAddsRequestID(t *testing.T) {
+	r := NewRouter()
+	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+	req.Header.Set(requestIDHeader, "req-123")
+	w := httptest.NewRecorder()
+
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+
+	if got := w.Header().Get(requestIDHeader); got != "req-123" {
+		t.Fatalf("expected response request id %q, got %q", "req-123", got)
+	}
+}
+
 func TestMeRequiresBearer(t *testing.T) {
 	r := NewRouter()
 	req := httptest.NewRequest(http.MethodGet, "/me", nil)

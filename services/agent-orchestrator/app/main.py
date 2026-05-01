@@ -3,6 +3,7 @@ from typing import Any, Literal
 from fastapi import FastAPI
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from .contracts import build_orchestrator_state, validate_modules
 from .graph import GraphNode, OrchestratorState, PlaceholderLangGraph
 
 app = FastAPI(title="agent-orchestrator", version="0.1.0")
@@ -22,11 +23,7 @@ class OrchestrateRequest(BaseModel):
     @field_validator("modules")
     @classmethod
     def validate_modules(cls, modules: list[ModuleName]) -> list[ModuleName]:
-        if len(modules) != len(set(modules)):
-            raise ValueError("modules must not contain duplicates")
-        if not modules:
-            raise ValueError("modules must include at least one service")
-        return modules
+        return validate_modules(modules)
 
 
 class OrchestrateResponse(BaseModel):
@@ -94,10 +91,6 @@ def healthz() -> dict[str, str]:
 
 @app.post("/orchestrate", response_model=OrchestrateResponse)
 def orchestrate(payload: OrchestrateRequest) -> OrchestrateResponse:
-    state: OrchestratorState = {
-        "goal": payload.goal,
-        "modules": list(payload.modules),
-        "outputs": {},
-    }
+    state: OrchestratorState = build_orchestrator_state(payload.goal, list(payload.modules))
     final = _build_graph().invoke(state)
     return OrchestrateResponse(goal=payload.goal, modules=payload.modules, outputs=final["outputs"])

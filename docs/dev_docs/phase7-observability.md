@@ -61,3 +61,4 @@ docker compose -f infra/compose/docker-compose.phase7.yml down -v
 - Dashboard panels include starter expressions; adjust per final metric names used by production exporters/versions.
 - Alert rules are placeholders and should be integrated into team-specific routing and severity policy.
 - The placeholder alert set now includes an observability-plane target alert for the OTel collector and Jaeger, matching the dashboard's target-availability panel.
+- RabbitMQ now has a container healthcheck, and the collector waits for it to report healthy before starting, which reduces startup races in the baseline stack.

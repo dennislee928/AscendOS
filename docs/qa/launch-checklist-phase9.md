@@ -4,6 +4,7 @@ Release target: `v1.0.0`
 
 This checklist is machine-gated by `.github/workflows/phase9-quality-gates.yml`.
 Every checkbox must be complete before `launch-readiness` can pass on `main`.
+Any `TODO(owner):` marker in this file is also treated as a launch blocker.
 
 ## Quality Gates
 

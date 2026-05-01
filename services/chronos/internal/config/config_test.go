@@ -1,6 +1,9 @@
 package config
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestLoadUsesDefaultsWhenEnvUnset(t *testing.T) {
 	t.Setenv("CHRONOS_SERVICE_NAME", "")
@@ -14,11 +17,15 @@ func TestLoadUsesDefaultsWhenEnvUnset(t *testing.T) {
 	if cfg.HTTPAddr != ":8080" {
 		t.Fatalf("HTTPAddr = %q, want %q", cfg.HTTPAddr, ":8080")
 	}
+	if cfg.ReadHeaderTimeout != 5*time.Second {
+		t.Fatalf("ReadHeaderTimeout = %v, want %v", cfg.ReadHeaderTimeout, 5*time.Second)
+	}
 }
 
 func TestLoadUsesEnvironmentOverrides(t *testing.T) {
 	t.Setenv("CHRONOS_SERVICE_NAME", "chronos-test")
 	t.Setenv("CHRONOS_HTTP_ADDR", "127.0.0.1:9090")
+	t.Setenv("CHRONOS_READ_HEADER_TIMEOUT", "2s")
 
 	cfg := Load()
 
@@ -27,5 +34,8 @@ func TestLoadUsesEnvironmentOverrides(t *testing.T) {
 	}
 	if cfg.HTTPAddr != "127.0.0.1:9090" {
 		t.Fatalf("HTTPAddr = %q, want %q", cfg.HTTPAddr, "127.0.0.1:9090")
+	}
+	if cfg.ReadHeaderTimeout != 2*time.Second {
+		t.Fatalf("ReadHeaderTimeout = %v, want %v", cfg.ReadHeaderTimeout, 2*time.Second)
 	}
 }
