@@ -68,7 +68,21 @@ run_go_gate() {
     profile_dir="$(mktemp -d)"
     profile_file="${profile_dir}/coverage.out"
     log "go module=${module_dir#${REPO_ROOT}/}"
-    (cd "${module_dir}" && go test -coverprofile="${profile_file}" ./...)
+    local module_output module_rc
+    if module_output="$(cd "${module_dir}" && go test -coverprofile="${profile_file}" ./... 2>&1)"; then
+      :
+    else
+      module_rc=$?
+      printf '%s\n' "${module_output}"
+      if [[ "${STRICT}" == "1" ]]; then
+        exit "${module_rc}"
+      fi
+      if printf '%s\n' "${module_output}" | grep -Eq 'proxy\.golang\.org|lookup .*no such host|dial tcp|download'; then
+        log "go module=${module_dir#${REPO_ROOT}/} skipped offline because dependencies are not cached"
+        continue
+      fi
+      exit "${module_rc}"
+    fi
     coverage="$(cd "${module_dir}" && go tool cover -func="${profile_file}" | awk '/^total:/ {print $3}' | tail -n 1)"
     if [[ -z "${coverage}" ]]; then
       echo "[coverage-gate] unable to read Go coverage for ${module_dir#${REPO_ROOT}/}" >&2
