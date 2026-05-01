@@ -46,3 +46,31 @@ func TestHandlerRejectsMissingHabitID(t *testing.T) {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
 	}
 }
+
+func TestHandlerListsHabitStreaks(t *testing.T) {
+	handler := NewHandler("praxis")
+
+	req := httptest.NewRequest(http.MethodPost, "/habit-streaks", strings.NewReader(`{
+		"id":"streak-2",
+		"habit_id":"habit-2",
+		"current_streak_days":8,
+		"longest_streak_days":11,
+		"missed_days_last_7":0
+	}`))
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("POST /habit-streaks status = %d, want %d", rec.Code, http.StatusCreated)
+	}
+
+	listReq := httptest.NewRequest(http.MethodGet, "/habit-streaks", nil)
+	listRec := httptest.NewRecorder()
+	handler.ServeHTTP(listRec, listReq)
+
+	if listRec.Code != http.StatusOK {
+		t.Fatalf("GET /habit-streaks status = %d, want %d", listRec.Code, http.StatusOK)
+	}
+	if body := listRec.Body.String(); !strings.Contains(body, `"habit_streaks"`) {
+		t.Fatalf("GET /habit-streaks body = %s, want streak list", body)
+	}
+}

@@ -67,7 +67,9 @@ func (h *Handler) habitStreaks(w http.ResponseWriter, r *http.Request) {
 		}
 		writeJSON(w, http.StatusCreated, stored)
 	case http.MethodGet:
-		writeError(w, http.StatusMethodNotAllowed, "use /relapse-risk to forecast")
+		writeJSON(w, http.StatusOK, map[string]any{
+			"habit_streaks": h.store.List(),
+		})
 	default:
 		methodNotAllowed(w)
 	}

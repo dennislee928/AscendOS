@@ -72,6 +72,24 @@ func (s *StreakStore) Forecast(habitID string, at time.Time) (RelapseForecast, e
 	return ForecastRelapse(streak, at), nil
 }
 
+// List returns a stable snapshot of the stored streaks.
+func (s *StreakStore) List() []HabitStreak {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	out := make([]HabitStreak, 0, len(s.streaks))
+	for _, streak := range s.streaks {
+		out = append(out, streak)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].HabitID == out[j].HabitID {
+			return out[i].ID < out[j].ID
+		}
+		return out[i].HabitID < out[j].HabitID
+	})
+	return out
+}
+
 // ForecastRelapse converts streak state into a normalized risk forecast.
 func ForecastRelapse(streak HabitStreak, at time.Time) RelapseForecast {
 	score := 0.55
