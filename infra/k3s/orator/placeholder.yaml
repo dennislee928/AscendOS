@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ascendos-ai
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orator
+  namespace: ascendos-ai
+  labels:
+    app: orator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orator
+  template:
+    metadata:
+      labels:
+        app: orator
+    spec:
+      containers:
+        - name: orator
+          image: ghcr.io/your-org/ascendos-orator:placeholder
+          ports:
+            - containerPort: 8081
+          env:
+            - name: RUST_LOG
+              value: info
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orator
+  namespace: ascendos-ai
+spec:
+  selector:
+    app: orator
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8081
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: orator
+  namespace: ascendos-ai
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`orator.example.com`)
+      services:
+        - name: orator
+          port: 80
+  tls:
+    secretName: placeholder-tls

@@ -96,6 +96,7 @@ services:
       - "9090:9090"
     volumes:
       - ../observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../observability/prometheus/rules:/etc/prometheus/rules:ro
       - prometheus-data:/prometheus
     depends_on:
       - otel-collector

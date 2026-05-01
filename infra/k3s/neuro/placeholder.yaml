@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ascendos-ai
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neuro
+  namespace: ascendos-ai
+  labels:
+    app: neuro
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: neuro
+  template:
+    metadata:
+      labels:
+        app: neuro
+    spec:
+      containers:
+        - name: neuro
+          image: ghcr.io/your-org/ascendos-neuro:placeholder
+          ports:
+            - containerPort: 7860
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: neuro
+  namespace: ascendos-ai
+spec:
+  selector:
+    app: neuro
+  ports:
+    - name: http
+      port: 80
+      targetPort: 7860
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: neuro
+  namespace: ascendos-ai
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`neuro.example.com`)
+      services:
+        - name: neuro
+          port: 80
+  tls:
+    secretName: placeholder-tls

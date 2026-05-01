@@ -280,17 +280,23 @@ Open questions to resolve before Phase 1 kick-off:
 - [ ] Docs site live with API reference + ADRs + onboarding guide.
 - [ ] CI green on `main`, signed release tag pushed.
 
-## 9. check list 
+## 9. Implementation Checklist (Main-Agent Coordinated, 2026-05-01)
 
-- [ ] phase 1 - description:
-- [ ] phase 2 - description:
-- [ ] phase 3 - description:
-- [ ] phase 4 - description:
-- [ ] phase 5 - description:
-- [ ] phase 6 - description:
-- [ ] phase 7 - description:
-- [ ] phase 8 - description:
-- [ ] phase 9 - description:
+Execution note:
+Main agent inspected this plan, split work into 9 phase-owned tracks with non-overlapping file ownership, and executed workers in rolling batches (platform limit: 6 concurrent agents) until all 9 phases were implemented at scaffold level.
+
+- [x] phase 1 - `core-gateway` scaffold implemented (`/healthz`, `/readyz`, `/metrics`, `/me` JWT stub), OpenAPI-first stub flow, proto placeholder, ADR-0001/0002 added.
+- [x] phase 2 - data-plane scaffolding implemented (Prisma schema, SQL seed/index placeholders, provider env templates, seed script placeholders, phase doc).
+- [x] phase 3 - Go module scaffolds implemented for `chronos`, `metis`, `praxis` (health endpoints, config/domain/MCP placeholders).
+- [x] phase 4 - Rust module scaffolds implemented for `aegis`, `orator` (axum services + analyzer pipeline placeholders).
+- [x] phase 5 - Python module scaffolds implemented for `neuro`, `argentum`, `kairos`, plus `agent-orchestrator` FastAPI + placeholder graph wiring.
+- [x] phase 6 - frontend scaffolds implemented for `apps/web-qwik`, `apps/marketing-svelte`, and `packages/ui` with route/component placeholders + TODO docs.
+- [x] phase 7 - observability/eventing hardening scaffolds implemented (`docker-compose.phase7.yml` integration, Prometheus rule placeholders, phase runbook).
+- [x] phase 8 - packaging/deployment scaffolds implemented (per-service Dockerfiles, HF Spaces README frontmatter templates, k3s fallback placeholders).
+- [x] phase 9 - quality-gate/launch scaffolds implemented (CI workflow, schemathesis/e2e placeholder scripts, QA/docs checklist artifacts).
+
+Current state:
+All 9 requested phases are now scaffolded in-repo. Remaining work is to replace placeholders with production logic, wire real credentials/providers, and enforce strict CI gates.
 
 ---
 
