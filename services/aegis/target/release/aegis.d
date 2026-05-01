@@ -1,0 +1,1 @@
+/Users/dennis_leedennis_lee/Documents/GitHub/cutting\ edge\ tools\ demo/services/aegis/target/release/aegis: /Users/dennis_leedennis_lee/Documents/GitHub/cutting\ edge\ tools\ demo/services/aegis/src/main.rs /Users/dennis_leedennis_lee/Documents/GitHub/cutting\ edge\ tools\ demo/services/aegis/src/pipeline.rs
