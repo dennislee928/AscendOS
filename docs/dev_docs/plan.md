@@ -296,24 +296,18 @@ Main agent inspected this plan, split work into 9 phase-owned tracks with non-ov
 - [x] phase 9 - quality-gate/launch scaffolds implemented (CI workflow, schemathesis/e2e placeholder scripts, QA/docs checklist artifacts).
 
 Current state:
-All 9 requested phases are now scaffolded in-repo, and several phase-owned hardening passes landed on top of the scaffolds:
-- `core-gateway` bearer parsing now rejects blank tokens.
-- `core-gateway` now propagates request IDs across the gateway surface.
-- Seed scripts fail fast on missing data-plane env vars.
-- Seed scripts now share a reusable env validator.
-- Go module scaffolds include config and MCP registry tests.
-- Go module configs now accept a shared header-timeout setting.
-- Python request/response models and orchestrator state handling are stricter.
-- The Python orchestrator now has a shared contract helper and a smoke test.
-- Phase 7 alert rules now include collector and Jaeger coverage.
-- Phase 7 compose now waits on RabbitMQ health before starting the collector.
-- Phase 8 k3s placeholders include pod security defaults and probes.
-- The Python deployment image now flushes logs immediately.
-- Phase 9 launch readiness now fails on unchecked checklist items.
-- Phase 9 launch readiness also rejects leftover `TODO(owner):` markers.
-- The frontend launchpad route model is shared between the two app shells.
+All 9 requested phases now have real implementation surfaces in addition to the original scaffolds:
+- `core-gateway` now exposes a typed module catalog at `/modules` and `/modules/:name`.
+- Seed scripts now consume a canonical manifest from `infra/data-plane/seed-manifest.ts`.
+- `chronos`, `metis`, and `praxis` now expose real in-memory domain APIs for sleep, spaced repetition, and relapse forecasting.
+- `aegis` and `orator` now return heuristic analysis outputs instead of generic placeholders.
+- `neuro`, `argentum`, `kairos`, and `agent-orchestrator` now return richer domain outputs plus an orchestrator smoke test.
+- The frontend launchpad now carries phase/domain/status metadata shared by both app shells.
+- Phase 7 compose now has readiness dependencies that make the local stack start more reliably.
+- Phase 8 deployment contracts are explicit in Dockerfiles, HF Space READMEs, and k3s manifests.
+- Phase 9 now includes a live deployment-metadata gate that validates HF Space frontmatter against Docker/static contracts.
 
-Remaining work is still to replace placeholders with production logic, wire real credentials/providers, and keep tightening CI gates as the implementation hardens.
+Current remaining work is the next tier of depth: real persistence, external provider wiring, richer model/runtime integrations, and tighter release automation on top of the now-functional contracts.
 
 ---
 
