@@ -3,12 +3,11 @@
 FROM golang:1.24-bookworm AS builder
 WORKDIR /src
 
-COPY services/chronos/go.mod ./services/chronos/go.mod
+COPY services/chronos ./services/chronos
 COPY services/praxis/go.mod ./services/praxis/go.mod
 RUN --mount=type=cache,target=/go/pkg/mod \
     cd services/praxis && go mod download
 
-COPY services/chronos ./services/chronos
 COPY services/praxis ./services/praxis
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
