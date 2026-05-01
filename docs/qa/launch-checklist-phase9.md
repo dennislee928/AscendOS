@@ -10,6 +10,7 @@ Any `TODO(owner):` marker in this file is also treated as a launch blocker.
 
 - [ ] Unit coverage >= 80% branch coverage for Go, Python, Rust, Node.
 - [ ] Schemathesis contract suite passes for each OpenAPI spec.
+- [ ] Deployment metadata gate passes for every Hugging Face Space template.
 - [ ] Nightly Playwright E2E is green for 7 consecutive days.
 - [ ] Dependency scan (`osv-scanner`) has no unresolved critical findings.
 - [ ] OWASP ZAP baseline scan findings are triaged and signed off.

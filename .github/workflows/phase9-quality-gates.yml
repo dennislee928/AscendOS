@@ -80,6 +80,21 @@ jobs:
           chmod +x scripts/ci/run-schemathesis-placeholder.sh
           scripts/ci/run-schemathesis-placeholder.sh --ci
 
+  deployment-metadata:
+    name: deployment-metadata
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate HF Space deployment metadata
+        run: python3 scripts/ci/validate-hf-space-contracts.py
+
   e2e-playwright-nightly:
     name: e2e-playwright-nightly
     runs-on: ubuntu-latest
@@ -120,6 +135,7 @@ jobs:
     needs:
       - unit-coverage
       - contract-schemathesis
+      - deployment-metadata
       - docs-quality
     steps:
       - name: Checkout

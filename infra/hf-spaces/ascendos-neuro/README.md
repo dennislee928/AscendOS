@@ -8,8 +8,8 @@ app_port: 7860
 pinned: true
 ---
 
-Template for the `neuro` Space.
+Docker-backed deployment contract for `neuro`.
 
-- Dockerfile scaffold: `infra/docker/neuro/Dockerfile`
-- Container should bind to `0.0.0.0:7860`
-- Consider `base_path: /docs` if you want docs as default landing page
+- Dockerfile: `infra/docker/neuro/Dockerfile`
+- Container listens on `0.0.0.0:7860`
+- Consider `base_path: /docs` if you want docs as the default landing page

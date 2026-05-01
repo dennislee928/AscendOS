@@ -16,6 +16,10 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 FROM gcr.io/distroless/static-debian12:nonroot
 WORKDIR /app
 COPY --from=builder /out/chronos /app/chronos
+LABEL io.ascendos.service="chronos" \
+      io.ascendos.runtime="go" \
+      io.ascendos.listen_port="8080"
+ENV PORT=8080
 EXPOSE 8080
 ENV CHRONOS_HTTP_ADDR=:8080
 USER nonroot:nonroot

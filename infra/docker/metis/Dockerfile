@@ -16,6 +16,10 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 FROM gcr.io/distroless/static-debian12:nonroot
 WORKDIR /app
 COPY --from=builder /out/metis /app/metis
+LABEL io.ascendos.service="metis" \
+      io.ascendos.runtime="go" \
+      io.ascendos.listen_port="8081"
+ENV PORT=8081
 EXPOSE 8081
 ENV METIS_HTTP_ADDR=:8081
 USER nonroot:nonroot

@@ -11,8 +11,9 @@ Current placeholder set targets the heavy-service migration profile:
 Each service folder contains a single manifest with:
 
 - Namespace
-- Deployment (1 replica)
-- ClusterIP Service
+- Deployment (1 replica) with service-specific listen port labels
+- ClusterIP Service exposing the same port contract as the image
+- HTTP readiness/liveness probes on `/healthz`
 - Traefik `IngressRoute`
 
 Update image references, TLS configuration, and middleware before production use.

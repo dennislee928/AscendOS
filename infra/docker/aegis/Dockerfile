@@ -12,6 +12,10 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 FROM gcr.io/distroless/cc-debian12:nonroot
 WORKDIR /app
 COPY --from=builder /src/target/release/aegis /app/aegis
+LABEL io.ascendos.service="aegis" \
+      io.ascendos.runtime="rust" \
+      io.ascendos.listen_port="8080"
+ENV PORT=8080
 EXPOSE 8080
 USER nonroot:nonroot
 ENTRYPOINT ["/app/aegis"]

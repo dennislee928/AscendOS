@@ -8,8 +8,8 @@ app_port: 7860
 pinned: true
 ---
 
-Template for the `agent-orchestrator` Space.
+Docker-backed deployment contract for `agent-orchestrator`.
 
-- Dockerfile scaffold: `infra/docker/agent-orchestrator/Dockerfile`
-- Container should bind to `0.0.0.0:7860`
+- Dockerfile: `infra/docker/agent-orchestrator/Dockerfile`
+- Container listens on `0.0.0.0:7860`
 - GPU is not required for this service profile

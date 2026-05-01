@@ -8,8 +8,8 @@ app_port: 8081
 pinned: true
 ---
 
-Template for the `orator` Space.
+Docker-backed deployment contract for `orator`.
 
-- Dockerfile scaffold: `infra/docker/orator/Dockerfile`
-- Container should bind to `0.0.0.0:8081`
-- Expose health endpoint at `/healthz`
+- Dockerfile: `infra/docker/orator/Dockerfile`
+- Container listens on `0.0.0.0:8081`
+- Health endpoint: `/healthz`

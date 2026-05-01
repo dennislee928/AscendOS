@@ -16,6 +16,10 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 FROM gcr.io/distroless/static-debian12:nonroot
 WORKDIR /app
 COPY --from=builder /out/core-gateway /app/core-gateway
+LABEL io.ascendos.service="core-gateway" \
+      io.ascendos.runtime="go" \
+      io.ascendos.listen_port="8080"
+ENV PORT=8080
 EXPOSE 8080
 USER nonroot:nonroot
 ENTRYPOINT ["/app/core-gateway"]
