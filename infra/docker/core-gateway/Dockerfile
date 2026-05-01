@@ -10,8 +10,9 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 COPY services/core-gateway ./services/core-gateway
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
+    cd services/core-gateway && \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build -trimpath -ldflags='-s -w' -o /out/core-gateway ./services/core-gateway/cmd/core-gateway
+    go build -trimpath -ldflags='-s -w' -o /out/core-gateway ./cmd/core-gateway
 
 FROM gcr.io/distroless/static-debian12:nonroot
 WORKDIR /app
