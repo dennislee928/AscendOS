@@ -1,44 +1,25 @@
 import re
 from collections import Counter
-from dataclasses import dataclass
-from typing import Callable, Literal
+from typing import Literal
+
+from fastapi import FastAPI
+from pydantic import BaseModel, field_validator
+
+app = FastAPI(title="neuro", version="0.1.0")
 
 
-class SimpleApp:
-    def __init__(self, title: str, version: str) -> None:
-        self.title = title
-        self.version = version
-        self.routes: dict[tuple[str, str], Callable[..., object]] = {}
-
-    def get(self, path: str) -> Callable[[Callable[..., object]], Callable[..., object]]:
-        def decorator(func: Callable[..., object]) -> Callable[..., object]:
-            self.routes[("GET", path)] = func
-            return func
-
-        return decorator
-
-    def post(self, path: str, response_model: object | None = None) -> Callable[[Callable[..., object]], Callable[..., object]]:
-        def decorator(func: Callable[..., object]) -> Callable[..., object]:
-            self.routes[("POST", path)] = func
-            return func
-
-        return decorator
-
-
-app = SimpleApp(title="neuro", version="0.1.0")
-
-
-@dataclass(frozen=True, slots=True)
-class NeuroAnalyzeRequest:
+class NeuroAnalyzeRequest(BaseModel):
     text: str
 
-    def __post_init__(self) -> None:
-        if not isinstance(self.text, str) or not self.text.strip():
+    @field_validator("text")
+    @classmethod
+    def text_must_be_nonempty(cls, value: str) -> str:
+        if not value.strip():
             raise ValueError("text must be a non-empty string")
+        return value
 
 
-@dataclass(frozen=True, slots=True)
-class NeuroAnalyzeResponse:
+class NeuroAnalyzeResponse(BaseModel):
     label: Literal["positive", "negative"]
     confidence: float
     embedding_preview: list[float]
@@ -145,7 +126,7 @@ def healthz() -> dict[str, str]:
     return {"status": "ok", "service": "neuro"}
 
 
-@app.post("/neuro/analyze")
+@app.post("/neuro/analyze", response_model=NeuroAnalyzeResponse)
 def analyze(payload: NeuroAnalyzeRequest) -> NeuroAnalyzeResponse:
     tokens = _tokenize(payload.text)
     positive_hits = sum(1 for token in tokens if token in POSITIVE_WORDS)

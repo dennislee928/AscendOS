@@ -1,61 +1,45 @@
 import re
 from collections import Counter
-from dataclasses import dataclass
-from typing import Any, Callable, Literal
+from typing import Any, Literal
 
-from .contracts import build_orchestrator_state, validate_modules
-from .graph import GraphNode, OrchestratorState, PlaceholderLangGraph, record_module_output
+from fastapi import FastAPI
+from pydantic import BaseModel, field_validator, model_validator
 
+from .contracts import OrchestratorState, build_orchestrator_state, validate_modules
+from .graph import make_compiled_graph, record_module_output
 
-class SimpleApp:
-    def __init__(self, title: str, version: str) -> None:
-        self.title = title
-        self.version = version
-        self.routes: dict[tuple[str, str], Callable[..., object]] = {}
-
-    def get(self, path: str) -> Callable[[Callable[..., object]], Callable[..., object]]:
-        def decorator(func: Callable[..., object]) -> Callable[..., object]:
-            self.routes[("GET", path)] = func
-            return func
-
-        return decorator
-
-    def post(self, path: str, response_model: object | None = None) -> Callable[[Callable[..., object]], Callable[..., object]]:
-        def decorator(func: Callable[..., object]) -> Callable[..., object]:
-            self.routes[("POST", path)] = func
-            return func
-
-        return decorator
-
-
-app = SimpleApp(title="agent-orchestrator", version="0.1.0")
+app = FastAPI(title="agent-orchestrator", version="0.1.0")
 
 ModuleName = Literal["neuro", "argentum", "kairos"]
 
 
-@dataclass(frozen=True, slots=True)
-class OrchestrateRequest:
+class OrchestrateRequest(BaseModel):
     goal: str
     modules: list[ModuleName] | None = None
 
-    def __post_init__(self) -> None:
-        if not isinstance(self.goal, str) or not self.goal.strip():
+    @field_validator("goal")
+    @classmethod
+    def goal_nonempty(cls, value: str) -> str:
+        if not value.strip():
             raise ValueError("goal must be a non-empty string")
+        return value
+
+    @model_validator(mode="after")
+    def normalize_modules(self) -> "OrchestrateRequest":
         if self.modules is None:
-            object.__setattr__(self, "modules", ["neuro", "argentum", "kairos"])
+            self.modules = list(["neuro", "argentum", "kairos"])
         else:
-            object.__setattr__(self, "modules", validate_modules(list(self.modules)))
+            self.modules = validate_modules(list(self.modules))
+        return self
 
 
-@dataclass(frozen=True, slots=True)
-class ModuleExecutionRecord:
+class ModuleExecutionRecord(BaseModel):
     module: ModuleName
     status: Literal["completed", "skipped", "failed"]
     output: dict[str, Any]
 
 
-@dataclass(frozen=True, slots=True)
-class ExecutionSummary:
+class ExecutionSummary(BaseModel):
     module_status: dict[str, Literal["pending", "completed", "skipped", "failed"]]
     ordered_outputs: list[ModuleExecutionRecord]
     completed_modules: list[ModuleName]
@@ -79,8 +63,7 @@ class ExecutionSummary:
         )
 
 
-@dataclass(frozen=True, slots=True)
-class OrchestrateResponse:
+class OrchestrateResponse(BaseModel):
     goal: str
     modules: list[ModuleName]
     outputs: dict[str, Any]
@@ -212,14 +195,14 @@ def _kairos_node(state: OrchestratorState) -> OrchestratorState:
     return record_module_output(state, "kairos", output)
 
 
-def _build_graph(modules: list[ModuleName]) -> PlaceholderLangGraph:
+def _build_graph(modules: list[ModuleName]) -> Any:
     node_map = {
-        "neuro": GraphNode(name="neuro", run=_neuro_node),
-        "argentum": GraphNode(name="argentum", run=_argentum_node),
-        "kairos": GraphNode(name="kairos", run=_kairos_node),
+        "neuro": ("neuro", _neuro_node),
+        "argentum": ("argentum", _argentum_node),
+        "kairos": ("kairos", _kairos_node),
     }
-    nodes = [node_map[module] for module in modules]
-    return PlaceholderLangGraph(nodes=nodes)
+    node_sequence = [node_map[module] for module in modules if module in node_map]
+    return make_compiled_graph(node_sequence)
 
 
 @app.get("/healthz")
@@ -227,14 +210,15 @@ def healthz() -> dict[str, str]:
     return {"status": "ok", "service": "agent-orchestrator"}
 
 
-@app.post("/orchestrate")
+@app.post("/orchestrate", response_model=OrchestrateResponse)
 def orchestrate(payload: OrchestrateRequest) -> OrchestrateResponse:
-    state: OrchestratorState = build_orchestrator_state(payload.goal, list(payload.modules or []))
-    final = _build_graph(payload.modules or []).invoke(state)
+    modules = list(payload.modules or [])
+    state: OrchestratorState = build_orchestrator_state(payload.goal, modules)
+    final = _build_graph(modules).invoke(state)
     summary = ExecutionSummary.from_state(final["execution_summary"])
     return OrchestrateResponse(
         goal=payload.goal,
-        modules=list(payload.modules or []),
+        modules=modules,
         outputs=final["outputs"],
         execution_summary=summary,
     )

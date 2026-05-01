@@ -1,34 +1,13 @@
 import math
-from dataclasses import dataclass
-from typing import Callable, Literal
+from typing import Literal
+
+from fastapi import FastAPI
+from pydantic import BaseModel, field_validator, model_validator
+
+app = FastAPI(title="argentum", version="0.1.0")
 
 
-class SimpleApp:
-    def __init__(self, title: str, version: str) -> None:
-        self.title = title
-        self.version = version
-        self.routes: dict[tuple[str, str], Callable[..., object]] = {}
-
-    def get(self, path: str) -> Callable[[Callable[..., object]], Callable[..., object]]:
-        def decorator(func: Callable[..., object]) -> Callable[..., object]:
-            self.routes[("GET", path)] = func
-            return func
-
-        return decorator
-
-    def post(self, path: str, response_model: object | None = None) -> Callable[[Callable[..., object]], Callable[..., object]]:
-        def decorator(func: Callable[..., object]) -> Callable[..., object]:
-            self.routes[("POST", path)] = func
-            return func
-
-        return decorator
-
-
-app = SimpleApp(title="argentum", version="0.1.0")
-
-
-@dataclass(frozen=True, slots=True)
-class RiskEvaluateRequest:
+class RiskEvaluateRequest(BaseModel):
     amount: float
     tenor_days: int
     counterparty_tier: int
@@ -36,21 +15,43 @@ class RiskEvaluateRequest:
     collateral_coverage: float | None = None
     payment_history_score: float | None = None
 
-    def __post_init__(self) -> None:
-        if self.amount <= 0:
+    @field_validator("amount")
+    @classmethod
+    def amount_positive(cls, value: float) -> float:
+        if value <= 0:
             raise ValueError("amount must be greater than zero")
-        if self.tenor_days <= 0:
+        return value
+
+    @field_validator("tenor_days")
+    @classmethod
+    def tenor_positive(cls, value: int) -> int:
+        if value <= 0:
             raise ValueError("tenor_days must be greater than zero")
-        if not 1 <= self.counterparty_tier <= 5:
+        return value
+
+    @field_validator("counterparty_tier")
+    @classmethod
+    def tier_in_range(cls, value: int) -> int:
+        if not 1 <= value <= 5:
             raise ValueError("counterparty_tier must be between 1 and 5")
-        if self.collateral_coverage is not None and not 0.0 <= self.collateral_coverage <= 2.0:
+        return value
+
+    @field_validator("collateral_coverage")
+    @classmethod
+    def collateral_in_range(cls, value: float | None) -> float | None:
+        if value is not None and not 0.0 <= value <= 2.0:
             raise ValueError("collateral_coverage must be between 0.0 and 2.0")
-        if self.payment_history_score is not None and not 0.0 <= self.payment_history_score <= 1.0:
+        return value
+
+    @field_validator("payment_history_score")
+    @classmethod
+    def history_in_range(cls, value: float | None) -> float | None:
+        if value is not None and not 0.0 <= value <= 1.0:
             raise ValueError("payment_history_score must be between 0.0 and 1.0")
+        return value
 
 
-@dataclass(frozen=True, slots=True)
-class RiskEvaluateResponse:
+class RiskEvaluateResponse(BaseModel):
     risk_score: float
     band: Literal["low", "medium", "high"]
     decision: Literal["approve", "review", "escalate"]
@@ -97,7 +98,7 @@ def healthz() -> dict[str, str]:
     return {"status": "ok", "service": "argentum"}
 
 
-@app.post("/argentum/evaluate-risk")
+@app.post("/argentum/evaluate-risk", response_model=RiskEvaluateResponse)
 def evaluate_risk(payload: RiskEvaluateRequest) -> RiskEvaluateResponse:
     amount_score = _clamp(math.log10(payload.amount + 10.0) / 7.0, 0.0, 1.0)
     tenor_score = _clamp(payload.tenor_days / 720.0, 0.0, 1.0)

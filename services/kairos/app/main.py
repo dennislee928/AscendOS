@@ -1,57 +1,49 @@
-from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Callable, Literal
+from typing import Literal
+
+from fastapi import FastAPI
+from pydantic import BaseModel, field_validator, model_validator
+
+app = FastAPI(title="kairos", version="0.1.0")
 
 
-class SimpleApp:
-    def __init__(self, title: str, version: str) -> None:
-        self.title = title
-        self.version = version
-        self.routes: dict[tuple[str, str], Callable[..., object]] = {}
-
-    def get(self, path: str) -> Callable[[Callable[..., object]], Callable[..., object]]:
-        def decorator(func: Callable[..., object]) -> Callable[..., object]:
-            self.routes[("GET", path)] = func
-            return func
-
-        return decorator
-
-    def post(self, path: str, response_model: object | None = None) -> Callable[[Callable[..., object]], Callable[..., object]]:
-        def decorator(func: Callable[..., object]) -> Callable[..., object]:
-            self.routes[("POST", path)] = func
-            return func
-
-        return decorator
-
-
-app = SimpleApp(title="kairos", version="0.1.0")
-
-
-@dataclass(frozen=True, slots=True)
-class BuildTimelineRequest:
+class BuildTimelineRequest(BaseModel):
     objective: str
     window_hours: int
     step_count: int
     priority: int = 3
-    constraints: list[str] = None  # type: ignore[assignment]
+    constraints: list[str] = []
 
-    def __post_init__(self) -> None:
-        if not isinstance(self.objective, str) or not self.objective.strip():
+    @field_validator("objective")
+    @classmethod
+    def objective_nonempty(cls, value: str) -> str:
+        if not value.strip():
             raise ValueError("objective must be a non-empty string")
-        if self.window_hours <= 0 or self.window_hours > 168:
+        return value
+
+    @field_validator("window_hours")
+    @classmethod
+    def window_in_range(cls, value: int) -> int:
+        if value <= 0 or value > 168:
             raise ValueError("window_hours must be between 1 and 168")
-        if self.step_count <= 0 or self.step_count > 10:
+        return value
+
+    @field_validator("step_count")
+    @classmethod
+    def steps_in_range(cls, value: int) -> int:
+        if value <= 0 or value > 10:
             raise ValueError("step_count must be between 1 and 10")
-        if self.priority < 1 or self.priority > 5:
+        return value
+
+    @field_validator("priority")
+    @classmethod
+    def priority_in_range(cls, value: int) -> int:
+        if value < 1 or value > 5:
             raise ValueError("priority must be between 1 and 5")
-        if self.constraints is None:
-            object.__setattr__(self, "constraints", [])
-        elif not isinstance(self.constraints, list):
-            raise ValueError("constraints must be a list of strings")
+        return value
 
 
-@dataclass(frozen=True, slots=True)
-class TimelineStep:
+class TimelineStep(BaseModel):
     at: datetime
     action: str
     kind: Literal["setup", "execution", "review", "buffer"]
@@ -59,8 +51,7 @@ class TimelineStep:
     notes: str
 
 
-@dataclass(frozen=True, slots=True)
-class BuildTimelineResponse:
+class BuildTimelineResponse(BaseModel):
     objective: str
     steps: list[TimelineStep]
     summary: str
@@ -133,7 +124,7 @@ def healthz() -> dict[str, str]:
     return {"status": "ok", "service": "kairos"}
 
 
-@app.post("/kairos/build-timeline")
+@app.post("/kairos/build-timeline", response_model=BuildTimelineResponse)
 def build_timeline(payload: BuildTimelineRequest) -> BuildTimelineResponse:
     steps = _generate_steps(payload)
     buffer_hours = round(max(1.0, payload.window_hours * (0.12 + 0.03 * (5 - payload.priority))), 2)

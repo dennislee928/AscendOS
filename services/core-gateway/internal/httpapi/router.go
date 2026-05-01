@@ -8,12 +8,13 @@ import (
 	"time"
 
 	"core-gateway/internal/auth"
+	natspub "core-gateway/internal/nats"
 	"github.com/gin-gonic/gin"
 )
 
 const requestIDHeader = "X-Request-Id"
 
-func NewRouter() *gin.Engine {
+func NewRouter(pub *natspub.Publisher) *gin.Engine {
 	catalog := newModuleCatalog()
 	authConfig := auth.LoadConfigFromEnv()
 
@@ -37,13 +38,17 @@ func NewRouter() *gin.Engine {
 	})
 
 	r.GET("/modules/:name", func(c *gin.Context) {
-		module, ok := catalog.get(c.Param("name"))
+		name := c.Param("name")
+		module, ok := catalog.get(name)
 		if !ok {
 			c.JSON(http.StatusNotFound, gin.H{"error": "module not found"})
 			return
 		}
 
 		c.JSON(http.StatusOK, module)
+		if pub != nil {
+			pub.Publish("ascendos.gateway.events", map[string]any{"type": "module_access", "module": name, "ts": time.Now().UTC()})
+		}
 	})
 
 	r.GET("/me", func(c *gin.Context) {
@@ -71,6 +76,9 @@ func NewRouter() *gin.Engine {
 		}
 
 		c.JSON(http.StatusOK, gin.H{"claims": claims})
+		if pub != nil {
+			pub.Publish("ascendos.gateway.events", map[string]any{"type": "module_access", "module": "me", "ts": time.Now().UTC()})
+		}
 	})
 
 	return r

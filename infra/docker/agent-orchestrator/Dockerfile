@@ -3,7 +3,8 @@
 FROM python:3.11-slim-bookworm AS builder
 WORKDIR /workspace
 
-RUN pip install --no-cache-dir --upgrade pip &&     pip install --no-cache-dir --target /opt/python fastapi "uvicorn[standard]" pydantic
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir --target /opt/python fastapi "uvicorn[standard]" pydantic "langgraph>=0.2"
 
 COPY services/agent-orchestrator/app ./app
 

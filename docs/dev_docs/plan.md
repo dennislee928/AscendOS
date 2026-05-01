@@ -311,4 +311,38 @@ Current remaining work is the next tier of depth: real persistence, external pro
 
 ---
 
+## 10. Implementation Wave 4 (2026-05-01) — In Progress
+
+Execution note:
+Main agent scanned all service files, identified the next disjoint depth layer, and launched 4 parallel workers with non-overlapping write sets.
+
+### Worker assignments
+
+| Worker | Slice | Files |
+|--------|-------|-------|
+| A | Python services → real FastAPI | `services/neuro/app/main.py`, `services/argentum/app/main.py`, `services/kairos/app/main.py` |
+| B | Agent orchestrator → FastAPI + LangGraph StateGraph | `services/agent-orchestrator/app/main.py`, `services/agent-orchestrator/app/graph.py` |
+| C | Prometheus full RED-metric alert suite + k3s neuro/orator manifests | `infra/observability/prometheus/rules/phase7-placeholder-alerts.yml`, `infra/k3s/neuro/placeholder.yaml`, `infra/k3s/orator/placeholder.yaml` |
+| D | NATS JetStream event publisher in core-gateway | `services/core-gateway/internal/nats/publisher.go` (new), `services/core-gateway/internal/httpapi/router.go`, `services/core-gateway/go.mod` |
+
+### Rationale per slice
+- **A**: Dockerfiles for all 3 Python services run `uvicorn app.main:app`; `SimpleApp` is not ASGI-compliant and will fail at container start.
+- **B**: `PlaceholderLangGraph` cannot be run or tested; replacing with real LangGraph `StateGraph` unblocks the agent-orchestrator's MCP routing path.
+- **C**: Prometheus rule file currently has only 3 generic infra alerts; full RED-metric coverage and k3s manifests for the two remaining Python/Rust services are required for Phase 8 HF/k3s readiness.
+- **D**: Plan specifies NATS JetStream for domain event streaming (Phase 7); core-gateway is the right emission point since it sees all cross-module calls.
+
+### Status
+- [x] Worker A — Python FastAPI conversion (complete: neuro, argentum, kairos converted from SimpleApp → FastAPI + Pydantic models)
+- [x] Worker B — Agent orchestrator FastAPI + LangGraph (complete: PlaceholderLangGraph → real `StateGraph`; SimpleApp → FastAPI; Dockerfile updated to include `langgraph>=0.2`)
+- [x] Worker C — Prometheus alerts + k3s manifests (complete: 4 new alert groups added covering gateway SLO, per-service health, LLM cost, HF Space sleep; k3s manifests corrected for neuro and orator)
+- [x] Worker D — NATS publisher in core-gateway (complete: `internal/nats/publisher.go` created; `router.go` wired to emit `ascendos.gateway.events` on module access and `/me`; `go.mod` updated with `nats.go v2`)
+
+### Net additions this wave
+- All Python services are now ASGI-compliant and can be served by uvicorn without modification
+- The agent-orchestrator graph is driven by LangGraph's `StateGraph` — compilable, inspectable, and extensible
+- Prometheus now covers 15 alert rules across infra, SLO, module health, LLM cost, and HF Space availability
+- NATS event streaming is wired at the gateway boundary for all cross-module calls
+
+---
+
 *End of plan.*
