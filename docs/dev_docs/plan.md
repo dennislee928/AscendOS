@@ -298,12 +298,20 @@ Main agent inspected this plan, split work into 9 phase-owned tracks with non-ov
 Current state:
 All 9 requested phases are now scaffolded in-repo, and several phase-owned hardening passes landed on top of the scaffolds:
 - `core-gateway` bearer parsing now rejects blank tokens.
+- `core-gateway` now propagates request IDs across the gateway surface.
 - Seed scripts fail fast on missing data-plane env vars.
+- Seed scripts now share a reusable env validator.
 - Go module scaffolds include config and MCP registry tests.
+- Go module configs now accept a shared header-timeout setting.
 - Python request/response models and orchestrator state handling are stricter.
+- The Python orchestrator now has a shared contract helper and a smoke test.
 - Phase 7 alert rules now include collector and Jaeger coverage.
+- Phase 7 compose now waits on RabbitMQ health before starting the collector.
 - Phase 8 k3s placeholders include pod security defaults and probes.
+- The Python deployment image now flushes logs immediately.
 - Phase 9 launch readiness now fails on unchecked checklist items.
+- Phase 9 launch readiness also rejects leftover `TODO(owner):` markers.
+- The frontend launchpad route model is shared between the two app shells.
 
 Remaining work is still to replace placeholders with production logic, wire real credentials/providers, and keep tightening CI gates as the implementation hardens.
 

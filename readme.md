@@ -36,13 +36,14 @@ This repository now contains a scaffolded implementation of the 9-phase plan in 
 ## Phase Status
 
 - Phase 1 to Phase 9: implemented at scaffold level
-- Targeted hardening passes landed for gateway auth, data-plane seeding, service tests, Python response schemas, observability alerts, k3s security defaults, and launch-gate checks
+- Targeted hardening passes landed for gateway auth and request IDs, data-plane seeding/validation, Go timeout config, service tests, Python response schemas plus orchestrator contract helpers, shared frontend launchpad data, observability alerts/healthchecks, k3s security defaults, deployment logging, and launch-gate checks
 - Checklist and notes: [`docs/dev_docs/plan.md`](/Users/dennis_leedennis_lee/Documents/GitHub/cutting edge tools demo/docs/dev_docs/plan.md)
 
 ## Important Notes
 
 - This is not production-complete yet; several files are intentionally placeholder implementations.
 - Auth/JWT validation, DB connections, model inference, and full observability alerting still need real integrations.
+- The new shared helpers and smoke tests should be treated as the contract baseline for the next implementation wave.
 - CI quality checks are scaffolded and can be made strict via `QUALITY_GATES_STRICT=1`.
 
 ## Suggested Next Build Steps
