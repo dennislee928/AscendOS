@@ -1,0 +1,236 @@
+# Build all service images, push to Docker Hub + Hugging Face registry, sync HF Spaces (docker SDK),
+# then probe /healthz on each Space runtime URL and upload a Markdown report.
+#
+# Required repository secrets:
+#   DOCKERHUB_USERNAME, DOCKERHUB_TOKEN
+#   HF_USERNAME, HF_TOKEN  (token needs write access to each Space repo under HF_USERNAME)
+#
+# Prerequisite: create each Space on huggingface.co (same names as hf_space in the matrix) with sdk: docker.
+# Static Space ascendos-web is not built here (sdk: static).
+
+name: deploy-docker-hf
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "infra/docker/**"
+      - "services/**"
+      - "scripts/ci/hf_space_pin_image.py"
+      - ".github/workflows/deploy-docker-hf.yml"
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: deploy-docker-hf-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PLATFORMS: linux/amd64
+
+jobs:
+  build-push-deploy:
+    name: ${{ matrix.service }} → registries + HF Space
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: core-gateway
+            hf_space: ascendos-gateway
+          - service: chronos
+            hf_space: ascendos-chronos
+          - service: metis
+            hf_space: ascendos-metis
+          - service: praxis
+            hf_space: ascendos-praxis
+          - service: aegis
+            hf_space: ascendos-aegis
+          - service: orator
+            hf_space: ascendos-orator
+          - service: neuro
+            hf_space: ascendos-neuro
+          - service: argentum
+            hf_space: ascendos-argentum
+          - service: kairos
+            hf_space: ascendos-kairos
+          - service: agent-orchestrator
+            hf_space: ascendos-agent
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lowercase HF owner (runtime URL / registry)
+        id: hf
+        run: |
+          u="${{ secrets.HF_USERNAME }}"
+          echo "owner_lc=${u,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to Hugging Face registry
+        uses: docker/login-action@v3
+        with:
+          registry: registry.huggingface.io
+          username: ${{ secrets.HF_USERNAME }}
+          password: ${{ secrets.HF_TOKEN }}
+
+      - name: Docker metadata (tags)
+        id: meta
+        run: |
+          sha="${GITHUB_SHA}"
+          short="${sha:0:12}"
+          dh_user="${{ secrets.DOCKERHUB_USERNAME }}"
+          hf_owner="${{ steps.hf.outputs.owner_lc }}"
+          space="${{ matrix.hf_space }}"
+          echo "tag_full=${sha}" >> "$GITHUB_OUTPUT"
+          echo "tag_short=${short}" >> "$GITHUB_OUTPUT"
+          echo "dh_image=${dh_user}/ascendos-${{ matrix.service }}" >> "$GITHUB_OUTPUT"
+          echo "hf_image=registry.huggingface.io/${hf_owner}/${space}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/docker/${{ matrix.service }}/Dockerfile
+          platforms: ${{ env.PLATFORMS }}
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.dh_image }}:${{ steps.meta.outputs.tag_full }}
+            ${{ steps.meta.outputs.dh_image }}:${{ steps.meta.outputs.tag_short }}
+            ${{ steps.meta.outputs.dh_image }}:latest
+            ${{ steps.meta.outputs.hf_image }}:${{ steps.meta.outputs.tag_full }}
+            ${{ steps.meta.outputs.hf_image }}:${{ steps.meta.outputs.tag_short }}
+            ${{ steps.meta.outputs.hf_image }}:latest
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install huggingface_hub
+        run: pip install --disable-pip-version-check -q huggingface_hub
+
+      - name: Pin image on Hugging Face Space (deploy)
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python scripts/ci/hf_space_pin_image.py \
+            --repo-id "${{ steps.hf.outputs.owner_lc }}/${{ matrix.hf_space }}" \
+            --image "${{ steps.meta.outputs.hf_image }}:${{ steps.meta.outputs.tag_full }}" \
+            --readme "infra/hf-spaces/${{ matrix.hf_space }}/README.md" \
+            --token "$HF_TOKEN"
+
+  health-report:
+    name: Health checks + report
+    runs-on: ubuntu-latest
+    needs: build-push-deploy
+    if: always()
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Probe Spaces /healthz
+        id: probe
+        env:
+          HF_USER: ${{ secrets.HF_USERNAME }}
+        run: |
+          set +e
+          owner_lc="${HF_USER,,}"
+          report_dir="deploy-reports"
+          mkdir -p "$report_dir"
+          report="$report_dir/health-${{ github.run_id }}.md"
+          ts="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+          tmp="$(mktemp -d)"
+
+          spaces=(
+            ascendos-gateway
+            ascendos-chronos
+            ascendos-metis
+            ascendos-praxis
+            ascendos-aegis
+            ascendos-orator
+            ascendos-neuro
+            ascendos-argentum
+            ascendos-kairos
+            ascendos-agent
+          )
+
+          for s in "${spaces[@]}"; do
+            (
+              base="https://${owner_lc}-${s}.hf.space"
+              url="${base}/healthz"
+              body_file="$(mktemp)"
+              ok=0
+              code=""
+              for _ in $(seq 1 28); do
+                code=$(curl -sS -m 25 -o "$body_file" -w "%{http_code}" "$url" 2>/dev/null || echo "000")
+                if [ "$code" = "200" ]; then
+                  ok=1
+                  break
+                fi
+                sleep 15
+              done
+              snippet=""
+              if [ -s "$body_file" ]; then
+                snippet=$(head -c 200 "$body_file" | tr '\n\t' '  ' | sed 's/|/\\|/g')
+              fi
+              rm -f "$body_file"
+              printf '%s|%s|%s|%s\n' "$ok" "$base" "$code" "$snippet" > "$tmp/$s.tsv"
+            ) &
+          done
+          wait
+
+          {
+            echo "# Deploy health report"
+            echo ""
+            echo "- **Run**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            echo "- **Commit**: \`${{ github.sha }}\`"
+            echo "- **Generated (UTC)**: ${ts}"
+            echo ""
+            echo "| Space | Runtime URL | /healthz | Notes |"
+            echo "|-------|-------------|----------|-------|"
+          } > "$report"
+
+          failed=0
+          for s in "${spaces[@]}"; do
+            IFS='|' read -r ok base code snippet < "$tmp/$s.tsv" || true
+            if [ "$ok" != "1" ]; then
+              failed=1
+              echo "| $s | $base | **FAIL** (\`$code\`) | $snippet |" >> "$report"
+            else
+              echo "| $s | $base | **OK** (\`200\`) | $snippet |" >> "$report"
+            fi
+          done
+
+          rm -rf "$tmp"
+
+          echo "" >> "$report"
+          echo "---" >> "$report"
+          echo "Probes run in parallel; each Space retries for up to ~7 minutes (cold starts after deploy are common)." >> "$report"
+
+          echo "failed=${failed}" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-health-report
+          path: deploy-reports/
+
+      - name: Fail if any health check did not reach HTTP 200
+        if: steps.probe.outputs.failed == '1'
+        run: |
+          echo "One or more /healthz checks failed after retries. See uploaded artifact deploy-health-report."
+          exit 1
