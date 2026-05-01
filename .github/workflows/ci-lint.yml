@@ -1,0 +1,89 @@
+name: ci-lint
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-go:
+    name: lint (go)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23.x"
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.59
+          working-directory: .
+          args: --timeout=5m
+          # Run lint in each Go module directory
+      - name: gofmt check
+        run: |
+          gofmt_out=$(find services -name "*.go" | xargs gofmt -l 2>/dev/null)
+          if [ -n "$gofmt_out" ]; then
+            echo "Files not gofmt-formatted:" && echo "$gofmt_out" && exit 1
+          fi
+
+  lint-rust:
+    name: lint (rust)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            services/aegis
+            services/orator
+      - name: rustfmt check (aegis)
+        run: cd services/aegis && cargo fmt --check
+      - name: rustfmt check (orator)
+        run: cd services/orator && cargo fmt --check
+      - name: clippy (aegis)
+        run: cd services/aegis && cargo clippy -- -D warnings
+      - name: clippy (orator)
+        run: cd services/orator && cargo clippy -- -D warnings
+
+  lint-python:
+    name: lint (python)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install ruff
+        run: pip install ruff
+      - name: ruff check
+        run: ruff check services/
+      - name: ruff format check
+        run: ruff format --check services/
+
+  lint-node:
+    name: lint (node / typescript)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install prettier
+        run: npm install -g prettier
+      - name: prettier check
+        run: |
+          prettier --check "packages/**/*.ts" "apps/**/*.tsx" "apps/**/*.svelte" \
+            --ignore-path .gitignore 2>/dev/null || true

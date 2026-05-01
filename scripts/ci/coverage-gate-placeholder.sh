@@ -176,7 +176,7 @@ run_rust_gate() {
   for cargo_toml in "${cargo_tomls[@]}"; do
     crate_dir="$(dirname "${cargo_toml}")"
     log "rust crate=${crate_dir#${REPO_ROOT}/}"
-    (cd "${crate_dir}" && cargo test --offline)
+    (cd "${crate_dir}" && cargo test)
   done
 }
 

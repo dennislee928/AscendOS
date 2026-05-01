@@ -1,0 +1,86 @@
+name: ci-security
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: ci-security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  osv-scan:
+    name: osv-scanner
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run OSV-Scanner
+        uses: google/osv-scanner-action@v1
+        with:
+          scan-args: |-
+            --recursive
+            --skip-git
+            ./
+
+  go-vuln:
+    name: govulncheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.23.x"
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+      - name: govulncheck (core-gateway)
+        run: cd services/core-gateway && govulncheck ./...
+        continue-on-error: true
+      - name: govulncheck (chronos)
+        run: cd services/chronos && govulncheck ./...
+        continue-on-error: true
+      - name: govulncheck (metis)
+        run: cd services/metis && govulncheck ./...
+        continue-on-error: true
+      - name: govulncheck (praxis)
+        run: cd services/praxis && govulncheck ./...
+        continue-on-error: true
+
+  pip-audit:
+    name: pip-audit (python)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pip-audit
+        run: pip install pip-audit
+      - name: Audit Python service dependencies
+        run: |
+          for req in $(find services -name requirements.txt); do
+            echo "Auditing $req"
+            pip-audit -r "$req" --skip-editable || true
+          done
+
+  cargo-audit:
+    name: cargo-audit (rust)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+      - name: Audit aegis
+        run: cd services/aegis && cargo audit
+        continue-on-error: true
+      - name: Audit orator
+        run: cd services/orator && cargo audit
+        continue-on-error: true
