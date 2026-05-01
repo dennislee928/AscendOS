@@ -32,6 +32,13 @@ def main() -> None:
     readme_text = args.readme.read_text(encoding="utf-8")
     dockerfile = build_dockerfile(args.image)
     api = HfApi(token=args.token)
+    # create_commit requires the Space to exist; bootstrap Docker Spaces if missing.
+    api.create_repo(
+        repo_id=args.repo_id,
+        repo_type="space",
+        space_sdk="docker",
+        exist_ok=True,
+    )
     api.create_commit(
         repo_id=args.repo_id,
         repo_type="space",

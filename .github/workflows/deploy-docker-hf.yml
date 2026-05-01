@@ -11,8 +11,8 @@
 #   DOCKERHUB_USERNAME, DOCKERHUB_TOKEN
 #   HF_USERNAME, HF_TOKEN  (token needs write access to each Space repo under HF_USERNAME)
 #
-# Prerequisite: create each Space on huggingface.co (same names as hf_space in the matrix) with sdk: docker.
-# Static Space ascendos-web is not built here (sdk: static).
+# HF_TOKEN must allow creating Spaces if they do not exist yet (script calls create_repo + create_commit).
+# Space names match hf_space in the matrix (sdk: docker). Static ascendos-web is not built here (sdk: static).
 
 name: deploy-docker-hf
 
