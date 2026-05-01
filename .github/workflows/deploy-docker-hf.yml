@@ -249,14 +249,77 @@ jobs:
           echo "failed=${failed}" >> "$GITHUB_OUTPUT"
           exit 0
 
+      - name: Append failed matrix job log excerpts (Docker / buildx)
+        id: build_diag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set +e
+          report_dir="deploy-reports"
+          report="$report_dir/health-${{ github.run_id }}.md"
+          mkdir -p "$report_dir"
+          if [ ! -f "$report" ]; then
+            echo "# Deploy report" > "$report"
+          fi
+
+          jobs_url="${{ github.api_url }}/repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/jobs?per_page=100"
+          curl -sS --fail -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "$jobs_url" -o /tmp/wf-jobs.json
+          curl_rc=$?
+
+          {
+            echo ""
+            echo "## Docker Build / matrix error digest"
+            echo ""
+            echo "For the **full** Docker Build summary, timings, and downloadable \`.dockerbuild\` record, open each matrix job below (GitHub → job → **Docker Build** / raw log)."
+            echo ""
+            echo "This section only appends **truncated tail excerpts** from failed \`build-push-deploy\` jobs (names containing \`registries\`)."
+            echo ""
+          } >> "$report"
+
+          if [ "$curl_rc" != 0 ] || ! command -v jq >/dev/null 2>&1; then
+            echo "_Could not load workflow jobs from the GitHub API (curl exit ${curl_rc})._" >> "$report"
+            echo "any_failed=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          fc=$(jq '[.jobs[] | select(.conclusion == "failure" and (.name | contains("registries")))] | length' /tmp/wf-jobs.json)
+          if [ "${fc:-0}" -eq 0 ]; then
+            echo "_No failed matrix jobs matching \`registries\` were reported for this run._" >> "$report"
+            echo "any_failed=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "any_failed=1" >> "$GITHUB_OUTPUT"
+
+          while IFS='|' read -r jid jname jurl; do
+            [ -n "${jid:-}" ] || continue
+            echo "### ${jname}" >> "$report"
+            echo "" >> "$report"
+            echo "- **Open full log / Docker Build summary**: [${jname}](${jurl})" >> "$report"
+            echo "- **Typical errors**: \`go build\` exit 1, \`buildx failed\`, \`go mod download\`, or missing context in Dockerfile paths." >> "$report"
+            echo "" >> "$report"
+            echo '```text' >> "$report"
+            curl -sSL -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "${{ github.api_url }}/repos/${{ github.repository }}/actions/jobs/${jid}/logs" 2>/dev/null | tail -n 120 >> "$report" || echo "(failed to download job log)" >> "$report"
+            echo '```' >> "$report"
+            echo "" >> "$report"
+          done < <(jq -r '.jobs[] | select(.conclusion == "failure" and (.name | contains("registries"))) | "\(.id)|\(.name)|\(.html_url)"' /tmp/wf-jobs.json)
+
+          exit 0
+
       - name: Upload report artifact
         uses: actions/upload-artifact@v4
         with:
           name: deploy-health-report
           path: deploy-reports/
 
-      - name: Fail if any health check did not reach HTTP 200
-        if: steps.probe.outputs.failed == '1'
+      - name: Fail on health and/or Docker matrix failures
+        if: ${{ steps.probe.outputs.failed == '1' || steps.build_diag.outputs.any_failed == '1' }}
         run: |
-          echo "One or more /healthz checks failed after retries. See uploaded artifact deploy-health-report."
+          echo "See artifact **deploy-health-report** for the /healthz table and **Docker Build / matrix error digest** (log excerpts + job links)."
           exit 1
