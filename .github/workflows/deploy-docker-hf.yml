@@ -1,5 +1,11 @@
-# Build all service images, push to Docker Hub + Hugging Face registry, sync HF Spaces (docker SDK),
+# Build all service images, push to Docker Hub, sync HF Spaces (docker SDK) using that image as FROM,
 # then probe /healthz on each Space runtime URL and upload a Markdown report.
+#
+# Hugging Face Spaces pull from Docker Hub (public repos). This avoids CI depending on
+# registry.huggingface.io DNS/reachability (self-hosted runners often fail with "no such host").
+#
+# Optional: workflow_dispatch with push_hf_registry=true mirrors the same tags to registry.huggingface.io
+# (requires your runner to resolve that hostname).
 #
 # Required repository secrets:
 #   DOCKERHUB_USERNAME, DOCKERHUB_TOKEN
@@ -12,6 +18,14 @@ name: deploy-docker-hf
 
 on:
   workflow_dispatch:
+    inputs:
+      push_hf_registry:
+        description: Also mirror images to registry.huggingface.io (needs working DNS to HF)
+        type: choice
+        options:
+          - "false"
+          - "true"
+        default: "false"
   push:
     branches:
       - main
@@ -31,6 +45,7 @@ concurrency:
 
 env:
   PLATFORMS: linux/amd64
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build-push-deploy:
@@ -79,13 +94,6 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Log in to Hugging Face registry
-        uses: docker/login-action@v3
-        with:
-          registry: registry.huggingface.io
-          username: ${{ secrets.HF_USERNAME }}
-          password: ${{ secrets.HF_TOKEN }}
-
       - name: Docker metadata (tags)
         id: meta
         run: |
@@ -94,12 +102,14 @@ jobs:
           dh_user="${{ secrets.DOCKERHUB_USERNAME }}"
           hf_owner="${{ steps.hf.outputs.owner_lc }}"
           space="${{ matrix.hf_space }}"
+          dh_user_lc="${dh_user,,}"
           echo "tag_full=${sha}" >> "$GITHUB_OUTPUT"
           echo "tag_short=${short}" >> "$GITHUB_OUTPUT"
-          echo "dh_image=${dh_user}/ascendos-${{ matrix.service }}" >> "$GITHUB_OUTPUT"
+          echo "dh_image=${dh_user_lc}/ascendos-${{ matrix.service }}" >> "$GITHUB_OUTPUT"
+          echo "pin_image=docker.io/${dh_user_lc}/ascendos-${{ matrix.service }}" >> "$GITHUB_OUTPUT"
           echo "hf_image=registry.huggingface.io/${hf_owner}/${space}" >> "$GITHUB_OUTPUT"
 
-      - name: Build and push
+      - name: Build and push (Docker Hub)
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -110,9 +120,25 @@ jobs:
             ${{ steps.meta.outputs.dh_image }}:${{ steps.meta.outputs.tag_full }}
             ${{ steps.meta.outputs.dh_image }}:${{ steps.meta.outputs.tag_short }}
             ${{ steps.meta.outputs.dh_image }}:latest
-            ${{ steps.meta.outputs.hf_image }}:${{ steps.meta.outputs.tag_full }}
-            ${{ steps.meta.outputs.hf_image }}:${{ steps.meta.outputs.tag_short }}
-            ${{ steps.meta.outputs.hf_image }}:latest
+
+      - name: Log in to Hugging Face registry
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.push_hf_registry == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: registry.huggingface.io
+          username: ${{ secrets.HF_USERNAME }}
+          password: ${{ secrets.HF_TOKEN }}
+
+      - name: Mirror tags to Hugging Face registry
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.push_hf_registry == 'true'
+        run: |
+          set -euo pipefail
+          src="${{ steps.meta.outputs.dh_image }}:${{ steps.meta.outputs.tag_full }}"
+          dst_base="${{ steps.meta.outputs.hf_image }}"
+          for tag in "${{ steps.meta.outputs.tag_full }}" "${{ steps.meta.outputs.tag_short }}" "latest"; do
+            docker buildx imagetools create --tag "${dst_base}:${tag}" "${{ steps.meta.outputs.dh_image }}:${tag}"
+          done
+          echo "Mirrored ${src} -> ${dst_base}:*"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -128,7 +154,7 @@ jobs:
         run: |
           python scripts/ci/hf_space_pin_image.py \
             --repo-id "${{ steps.hf.outputs.owner_lc }}/${{ matrix.hf_space }}" \
-            --image "${{ steps.meta.outputs.hf_image }}:${{ steps.meta.outputs.tag_full }}" \
+            --image "${{ steps.meta.outputs.pin_image }}:${{ steps.meta.outputs.tag_full }}" \
             --readme "infra/hf-spaces/${{ matrix.hf_space }}/README.md" \
             --token "$HF_TOKEN"
 
