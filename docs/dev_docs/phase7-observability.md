@@ -14,6 +14,7 @@ This baseline is intentionally minimal and developer-focused:
 - Exposes collector-scraped broker metrics into Prometheus.
 - Preloads Grafana datasource provisioning and starter dashboards.
 - Includes starter alert rules as placeholders.
+- Prometheus now waits for its `/-/ready` endpoint before Grafana starts, which avoids datasource provisioning races during local boot.
 
 ## Files
 
@@ -62,3 +63,4 @@ docker compose -f infra/compose/docker-compose.phase7.yml down -v
 - Alert rules are placeholders and should be integrated into team-specific routing and severity policy.
 - The placeholder alert set now includes an observability-plane target alert for the OTel collector and Jaeger, matching the dashboard's target-availability panel.
 - RabbitMQ now has a container healthcheck, and the collector waits for it to report healthy before starting, which reduces startup races in the baseline stack.
+- Prometheus now exposes a container healthcheck on `/-/ready`, and Grafana waits for Prometheus to report healthy before provisioning dashboards.

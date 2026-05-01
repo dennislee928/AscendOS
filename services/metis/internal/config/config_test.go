@@ -8,6 +8,7 @@ import (
 func TestLoadUsesDefaultsWhenEnvUnset(t *testing.T) {
 	t.Setenv("METIS_SERVICE_NAME", "")
 	t.Setenv("METIS_HTTP_ADDR", "")
+	t.Setenv("METIS_DATA_DIR", "")
 
 	cfg := Load()
 
@@ -20,12 +21,16 @@ func TestLoadUsesDefaultsWhenEnvUnset(t *testing.T) {
 	if cfg.ReadHeaderTimeout != 5*time.Second {
 		t.Fatalf("ReadHeaderTimeout = %v, want %v", cfg.ReadHeaderTimeout, 5*time.Second)
 	}
+	if cfg.DataDir != "./data" {
+		t.Fatalf("DataDir = %q, want %q", cfg.DataDir, "./data")
+	}
 }
 
 func TestLoadUsesEnvironmentOverrides(t *testing.T) {
 	t.Setenv("METIS_SERVICE_NAME", "metis-test")
 	t.Setenv("METIS_HTTP_ADDR", "127.0.0.1:9191")
 	t.Setenv("METIS_READ_HEADER_TIMEOUT", "3s")
+	t.Setenv("METIS_DATA_DIR", "/tmp/metis-data")
 
 	cfg := Load()
 
@@ -37,5 +42,8 @@ func TestLoadUsesEnvironmentOverrides(t *testing.T) {
 	}
 	if cfg.ReadHeaderTimeout != 3*time.Second {
 		t.Fatalf("ReadHeaderTimeout = %v, want %v", cfg.ReadHeaderTimeout, 3*time.Second)
+	}
+	if cfg.DataDir != "/tmp/metis-data" {
+		t.Fatalf("DataDir = %q, want %q", cfg.DataDir, "/tmp/metis-data")
 	}
 }

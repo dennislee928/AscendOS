@@ -2,7 +2,10 @@ module core-gateway
 
 go 1.22
 
-require github.com/gin-gonic/gin v1.10.1
+require (
+	github.com/gin-gonic/gin v1.10.1
+	github.com/nats-io/nats.go v2.37.0+incompatible
+)
 
 require (
 	github.com/bytedance/sonic v1.11.6 // indirect

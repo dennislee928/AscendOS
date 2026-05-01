@@ -10,6 +10,9 @@ metadata:
   namespace: ascendos-ai
   labels:
     app: orator
+  annotations:
+    ascendos.io/runtime: rust
+    ascendos.io/listen-port: "8080"
 spec:
   replicas: 1
   selector:
@@ -19,6 +22,9 @@ spec:
     metadata:
       labels:
         app: orator
+      annotations:
+        ascendos.io/runtime: rust
+        ascendos.io/listen-port: "8080"
     spec:
       securityContext:
         runAsNonRoot: true
@@ -29,7 +35,7 @@ spec:
           image: ghcr.io/your-org/ascendos-orator:placeholder
           imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 8081
+            - containerPort: 8080
               name: http
           env:
             - name: RUST_LOG
@@ -40,22 +46,24 @@ spec:
               drop:
                 - ALL
           readinessProbe:
-            tcpSocket:
+            httpGet:
+              path: /healthz
               port: http
             initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
-            tcpSocket:
+            httpGet:
+              path: /healthz
               port: http
             initialDelaySeconds: 15
             periodSeconds: 20
           resources:
             requests:
-              cpu: 100m
-              memory: 128Mi
-            limits:
-              cpu: 500m
+              cpu: 200m
               memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
 ---
 apiVersion: v1
 kind: Service
@@ -68,7 +76,8 @@ spec:
   ports:
     - name: http
       port: 80
-      targetPort: 8081
+      targetPort: 8080
+      appProtocol: http
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute

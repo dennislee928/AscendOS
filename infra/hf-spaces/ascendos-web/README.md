@@ -4,11 +4,12 @@ emoji: "🌐"
 colorFrom: blue
 colorTo: green
 sdk: static
+app_file: index.html
 pinned: true
 ---
 
-Template for the frontend Space.
+Static deployment contract for `ascendos-web`.
 
-- This Space is intentionally `sdk: static` (no Docker)
+- This Space is intentionally `sdk: static` and does not use Docker
 - Publish static frontend build artifacts in the Space root
-- Configure `app_file` when static entrypoint is finalized
+- Static entrypoint: `index.html`

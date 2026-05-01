@@ -8,8 +8,8 @@ app_port: 8081
 pinned: true
 ---
 
-Template for the `metis` Space.
+Docker-backed deployment contract for `metis`.
 
-- Dockerfile scaffold: `infra/docker/metis/Dockerfile`
-- Container should bind to `0.0.0.0:8081`
-- Ensure `METIS_HTTP_ADDR=:8081` at runtime
+- Dockerfile: `infra/docker/metis/Dockerfile`
+- Container listens on `0.0.0.0:8081`
+- Runtime env: `METIS_HTTP_ADDR=:8081`

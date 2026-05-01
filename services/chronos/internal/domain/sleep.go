@@ -1,9 +1,13 @@
 package domain
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
+	"os"
+	"path/filepath"
 	"sort"
 	"sync"
 	"time"
@@ -26,15 +30,26 @@ type CircadianPhase struct {
 	CalculatedAt    time.Time `json:"calculated_at"`
 }
 
-// SleepStore keeps an in-memory history of sleep events.
+// SleepStore keeps a file-backed history of sleep events.
 type SleepStore struct {
-	mu     sync.Mutex
-	events []SleepEvent
+	mu       sync.Mutex
+	dataPath string
+	events   []SleepEvent
 }
 
-// NewSleepStore constructs an empty sleep event store.
-func NewSleepStore() *SleepStore {
-	return &SleepStore{}
+// NewSleepStore loads sleep events from the configured data directory.
+func NewSleepStore(dataDir string) (*SleepStore, error) {
+	if dataDir == "" {
+		return nil, errors.New("data dir is required")
+	}
+
+	store := &SleepStore{
+		dataPath: filepath.Join(dataDir, "sleep-events.json"),
+	}
+	if err := store.load(); err != nil {
+		return nil, err
+	}
+	return store, nil
 }
 
 // Ingest stores a validated sleep event and returns the stored copy.
@@ -52,14 +67,23 @@ func (s *SleepStore) Ingest(event SleepEvent) (SleepEvent, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	for i := range s.events {
-		if s.events[i].ID == event.ID {
-			s.events[i] = event
+	next := append([]SleepEvent(nil), s.events...)
+	for i := range next {
+		if next[i].ID == event.ID {
+			next[i] = event
+			if err := s.persistLocked(next); err != nil {
+				return SleepEvent{}, err
+			}
+			s.events = next
 			return event, nil
 		}
 	}
 
-	s.events = append(s.events, event)
+	next = append(next, event)
+	if err := s.persistLocked(next); err != nil {
+		return SleepEvent{}, err
+	}
+	s.events = next
 	return event, nil
 }
 
@@ -169,4 +193,44 @@ func formatMinutes(minutes float64) string {
 	hours := (total / 60) % 24
 	minute := total % 60
 	return fmt.Sprintf("%02d:%02d", hours, minute)
+}
+
+func (s *SleepStore) load() error {
+	data, err := os.ReadFile(s.dataPath)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	data = bytes.TrimSpace(data)
+	if len(data) == 0 {
+		return nil
+	}
+
+	var snapshot struct {
+		Events []SleepEvent `json:"events"`
+	}
+	if err := json.Unmarshal(data, &snapshot); err != nil {
+		return err
+	}
+	s.events = append([]SleepEvent(nil), snapshot.Events...)
+	return nil
+}
+
+func (s *SleepStore) persistLocked(events []SleepEvent) error {
+	if err := os.MkdirAll(filepath.Dir(s.dataPath), 0o755); err != nil {
+		return err
+	}
+
+	payload, err := json.Marshal(struct {
+		Events []SleepEvent `json:"events"`
+	}{
+		Events: events,
+	})
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(s.dataPath, payload, 0o644)
 }

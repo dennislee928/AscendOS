@@ -1,53 +1,77 @@
-# AscendOS Scaffold (Cutting Edge Tools Demo)
+# AscendOS (Cutting Edge Tools Demo)
 
-This repository now contains a scaffolded implementation of the 9-phase plan in [`docs/dev_docs/plan.md`](/Users/dennis_leedennis_lee/Documents/GitHub/cutting edge tools demo/docs/dev_docs/plan.md), coordinated by a main agent and implemented across phase-owned tracks.
+This repository contains a multi-phase implementation of the AscendOS self-improvement platform, coordinated by a main agent and implemented across phase-owned tracks.
+Plan: [`docs/dev_docs/plan.md`](docs/dev_docs/plan.md)
 
 ## What Is Implemented
 
-- Polyglot service scaffolds:
-  - Go: `core-gateway`, `chronos`, `metis`, `praxis`
-  - Rust: `aegis`, `orator`
-  - Python: `neuro`, `argentum`, `kairos`, `agent-orchestrator`
-- Frontend scaffolds:
-  - `apps/web-qwik`
-  - `apps/marketing-svelte`
-  - `packages/ui`
-- Data-plane and schema scaffolds:
-  - Prisma schema + SQL placeholder assets
-  - Provider env templates + seed-script placeholders
-- Infra/deploy scaffolds:
-  - Phase 7 compose/observability configs
-  - Per-service Dockerfiles
-  - HF Spaces frontmatter templates
-  - Optional k3s fallback placeholders
-- Quality gate scaffolds:
-  - CI workflow and placeholder scripts for coverage, schemathesis, and E2E
-  - QA launch/checklist docs
+### Polyglot service layer
+- **Go**: `core-gateway`, `chronos`, `metis`, `praxis` — real domain endpoints, file-backed persistence, JWT HS256 auth, module catalog, NATS event publisher
+- **Rust**: `aegis`, `orator` — heuristic manipulation detector and prosody analyzer with unit tests
+- **Python**: `neuro`, `argentum`, `kairos` — real FastAPI services (ASGI-compliant, uvicorn-ready) with Pydantic validation
+- **Python**: `agent-orchestrator` — FastAPI + real LangGraph `StateGraph` with sequential neuro→argentum→kairos routing
+
+### Frontend
+- `apps/web-qwik` — Qwik City module routes (dashboard, auth, billing) with launchpad metadata
+- `apps/marketing-svelte` — SvelteKit marketing shell with matching module routes
+- `packages/ui` — shared Qwik/Solid design tokens and component stubs
+
+### Data plane
+- Prisma schema covering all 8 modules
+- SQL seed/index assets for Postgres
+- Provider env templates for Supabase, Redis, MongoDB, Qdrant, InfluxDB
+- Canonical seed manifest: `infra/data-plane/seed-manifest.ts`
+
+### Infra / deploy
+- Per-service Dockerfiles (multi-stage, distroless final)
+- HF Spaces `README.md` frontmatter for all 11 spaces
+- Phase 7 docker-compose with readiness dependencies
+- k3s manifests for aegis, orator, neuro (Traefik IngressRoute + Deployment + Service)
+- OTel collector config
+
+### Observability
+- Prometheus alert rules: 15 rules across infra, gateway SLO, per-module health, LLM cost, and HF Space availability
+- Grafana dashboard provisioning configs
+- Jaeger and OTel pipeline configs
+
+### Quality gates / CI
+- Coverage gate script (Go, Python, Rust, Node — offline-aware)
+- Schemathesis contract runner (offline OpenAPI validation + live mode)
+- E2E smoke script (curl health checks + offline unit smoke)
+- HF Space contract validator
 
 ## Repository Layout
 
-- `apps/` frontend shells and module route placeholders
-- `services/` backend service scaffolds by language/domain
-- `packages/` shared schema/proto/sql/ui assets
-- `infra/` compose, otel, observability, docker, hf-spaces, k3s
-- `scripts/` seed and CI helper placeholders
-- `docs/` implementation plan, ADRs, QA/API docs
+```
+apps/          frontend shells (web-qwik, marketing-svelte)
+services/      backend service implementations by language/domain
+packages/      shared schema, proto, SQL, UI assets
+infra/         compose, otel, observability, docker, hf-spaces, k3s
+scripts/       seed and CI helper scripts
+docs/          implementation plan, ADRs, QA/API docs
+```
 
 ## Phase Status
 
-- Phase 1 to Phase 9: implemented at scaffold level
-- Targeted hardening passes landed for gateway auth and request IDs, data-plane seeding/validation, Go timeout config, service tests, Python response schemas plus orchestrator contract helpers, shared frontend launchpad data, observability alerts/healthchecks, k3s security defaults, deployment logging, and launch-gate checks
-- Checklist and notes: [`docs/dev_docs/plan.md`](/Users/dennis_leedennis_lee/Documents/GitHub/cutting edge tools demo/docs/dev_docs/plan.md)
+All 9 phases scaffolded and progressively deepened across 4 implementation waves:
 
-## Important Notes
+| Wave | Work |
+|------|------|
+| 1 | Core-gateway catalog, seed manifest, Go domain endpoints, Python heuristics, shared frontend launchpad data, observability readiness, deployment contracts |
+| 2 | File-backed stores and seed runtime resolver |
+| 3 | Core-gateway JWT auth, CI automation scripts, Qwik module pages, Svelte module pages |
+| 4 | Python services → real FastAPI; agent-orchestrator → LangGraph StateGraph; Prometheus 15-rule alert suite; k3s manifests; NATS event publisher in core-gateway |
 
-- This is not production-complete yet; several files are intentionally placeholder implementations.
-- Auth/JWT validation, DB connections, model inference, and full observability alerting still need real integrations.
-- The new shared helpers and smoke tests should be treated as the contract baseline for the next implementation wave.
-- CI quality checks are scaffolded and can be made strict via `QUALITY_GATES_STRICT=1`.
+## Remaining Integration Work
 
-## Suggested Next Build Steps
+- Wire real provider secrets/env (Supabase, Redis, MongoDB, Qdrant, InfluxDB) and replace in-memory/file stores with live DB clients
+- Enable RAG in `neuro` (Qdrant + HF Inference embeddings) and forecasting in `argentum` (Prophet)
+- Turn on `QUALITY_GATES_STRICT=1` and add full contract + E2E coverage against deployed HF Spaces
+- Run `go mod tidy` in core-gateway to resolve NATS go.sum entry
+- Tag v1.0.0 after Grafana SLO dashboard shows 7 consecutive green days
 
-1. Replace service placeholders with real module logic per phase docs.
-2. Wire real provider secrets/env for Supabase, Redis, Mongo, Qdrant, Influx, and HF Spaces.
-3. Turn on strict CI gates and add full contract + E2E coverage.
+## Notes
+
+- CI quality checks are scaffolded and non-blocking by default; set `QUALITY_GATES_STRICT=1` to enforce thresholds
+- Auth uses local HS256 JWT validation; set `CORE_GATEWAY_JWT_SECRET` in env to override the default dev secret
+- NATS event publishing silently no-ops when `NATS_URL` is unset, so the gateway starts cleanly offline

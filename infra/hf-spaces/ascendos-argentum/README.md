@@ -8,8 +8,8 @@ app_port: 7860
 pinned: true
 ---
 
-Template for the `argentum` Space.
+Docker-backed deployment contract for `argentum`.
 
-- Dockerfile scaffold: `infra/docker/argentum/Dockerfile`
-- Container should bind to `0.0.0.0:7860`
-- Consider `base_path: /docs` if you want docs as default landing page
+- Dockerfile: `infra/docker/argentum/Dockerfile`
+- Container listens on `0.0.0.0:7860`
+- Consider `base_path: /docs` if you want docs as the default landing page

@@ -36,7 +36,10 @@ func TestCalculateCircadianPhase(t *testing.T) {
 }
 
 func TestSleepStoreIngestValidatesAndReplaces(t *testing.T) {
-	store := NewSleepStore()
+	store, err := NewSleepStore(t.TempDir())
+	if err != nil {
+		t.Fatalf("NewSleepStore() error = %v", err)
+	}
 	event := SleepEvent{
 		ID:        "evt-1",
 		StartedAt: time.Date(2026, 5, 1, 22, 0, 0, 0, time.UTC),
@@ -59,5 +62,35 @@ func TestSleepStoreIngestValidatesAndReplaces(t *testing.T) {
 	}
 	if got[0].EndedAt != replaced.EndedAt {
 		t.Fatalf("stored event end = %v, want %v", got[0].EndedAt, replaced.EndedAt)
+	}
+}
+
+func TestSleepStorePersistsAcrossInstances(t *testing.T) {
+	dataDir := t.TempDir()
+
+	store, err := NewSleepStore(dataDir)
+	if err != nil {
+		t.Fatalf("NewSleepStore() error = %v", err)
+	}
+	event := SleepEvent{
+		ID:        "evt-1",
+		StartedAt: time.Date(2026, 5, 1, 22, 0, 0, 0, time.UTC),
+		EndedAt:   time.Date(2026, 5, 2, 6, 0, 0, 0, time.UTC),
+	}
+	if _, err := store.Ingest(event); err != nil {
+		t.Fatalf("Ingest() error = %v", err)
+	}
+
+	reloaded, err := NewSleepStore(dataDir)
+	if err != nil {
+		t.Fatalf("NewSleepStore() reload error = %v", err)
+	}
+
+	got := reloaded.Events()
+	if len(got) != 1 {
+		t.Fatalf("len(Events()) = %d, want %d", len(got), 1)
+	}
+	if got[0].ID != event.ID {
+		t.Fatalf("stored event ID = %q, want %q", got[0].ID, event.ID)
 	}
 }

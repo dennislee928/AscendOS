@@ -17,17 +17,22 @@ type Handler struct {
 }
 
 // NewHandler builds the Chronos HTTP handler.
-func NewHandler(service string) http.Handler {
+func NewHandler(service, dataDir string) (http.Handler, error) {
+	store, err := domain.NewSleepStore(dataDir)
+	if err != nil {
+		return nil, err
+	}
+
 	h := &Handler{
 		service: service,
-		store:   domain.NewSleepStore(),
+		store:   store,
 		mux:     http.NewServeMux(),
 	}
 
 	h.mux.HandleFunc("/healthz", h.healthz)
 	h.mux.HandleFunc("/sleep-events", h.sleepEvents)
 	h.mux.HandleFunc("/circadian-phase", h.circadianPhase)
-	return h
+	return h, nil
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {

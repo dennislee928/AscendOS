@@ -31,7 +31,10 @@ func TestApplyReviewUsesSM2StyleIntervals(t *testing.T) {
 }
 
 func TestCardStoreDueReturnsSortedCards(t *testing.T) {
-	store := NewCardStore()
+	store, err := NewCardStore(t.TempDir())
+	if err != nil {
+		t.Fatalf("NewCardStore() error = %v", err)
+	}
 	_, _ = store.Upsert(Card{ID: "b", DueAt: time.Date(2026, 5, 3, 0, 0, 0, 0, time.UTC), EaseFactor: 2.5})
 	_, _ = store.Upsert(Card{ID: "a", DueAt: time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC), EaseFactor: 2.5})
 
@@ -41,5 +44,38 @@ func TestCardStoreDueReturnsSortedCards(t *testing.T) {
 	}
 	if got[0].ID != "a" || got[1].ID != "b" {
 		t.Fatalf("Due order = %q, %q; want a then b", got[0].ID, got[1].ID)
+	}
+}
+
+func TestCardStorePersistsAcrossInstances(t *testing.T) {
+	dataDir := t.TempDir()
+
+	store, err := NewCardStore(dataDir)
+	if err != nil {
+		t.Fatalf("NewCardStore() error = %v", err)
+	}
+	card := Card{
+		ID:           "card-1",
+		Front:        "front",
+		Back:         "back",
+		DueAt:        time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC),
+		IntervalDays: 1,
+		EaseFactor:   2.5,
+	}
+	if _, err := store.Upsert(card); err != nil {
+		t.Fatalf("Upsert() error = %v", err)
+	}
+
+	reloaded, err := NewCardStore(dataDir)
+	if err != nil {
+		t.Fatalf("NewCardStore() reload error = %v", err)
+	}
+
+	got := reloaded.Due(time.Date(2026, 5, 2, 0, 0, 0, 0, time.UTC))
+	if len(got) != 1 {
+		t.Fatalf("len(Due()) = %d, want %d", len(got), 1)
+	}
+	if got[0].ID != card.ID {
+		t.Fatalf("stored card ID = %q, want %q", got[0].ID, card.ID)
 	}
 }

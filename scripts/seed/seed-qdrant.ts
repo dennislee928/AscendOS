@@ -3,50 +3,41 @@
  * TODO: wire qdrant client + embedding provider during ML service bootstrap.
  */
 
-import { requireEnvSet } from "./env";
-import { resolveQdrantCollection, seedManifest } from "../../infra/data-plane/seed-manifest";
+import { resolveRuntimeConfig, type RuntimeConfig } from "./env";
 
-type QdrantSeedConfig = {
-  url?: string;
-  apiKey?: string;
-  collection: string;
-};
+type QdrantSeedContext = Readonly<{
+  config: RuntimeConfig;
+}>;
 
-async function ensureCollection(config: QdrantSeedConfig): Promise<void> {
-  console.log(`[seed-qdrant] would ensure collection "${config.collection}"`);
+function summarizeEndpoint(value: string): string {
+  return value.replace(/\/\/([^/@]+)@/, "//***@");
 }
 
-async function upsertDocuments(_config: QdrantSeedConfig): Promise<void> {
-  // Placeholder: read docs, chunk, embed, and upsert vectors.
+async function ensureCollection(ctx: QdrantSeedContext): Promise<void> {
+  const { qdrant } = ctx.config.providers;
   console.log(
-    `[seed-qdrant] would upsert ${seedManifest.documentSources.length} embedded document sources`,
+    `[seed-qdrant] would ensure collection "${qdrant.collection}" at ${summarizeEndpoint(qdrant.url)} (${qdrant.vectorSize}-dim ${qdrant.distance})`,
+  );
+}
+
+async function upsertDocuments(ctx: QdrantSeedContext): Promise<void> {
+  const { qdrant } = ctx.config.providers;
+  console.log(
+    `[seed-qdrant] would upsert ${ctx.config.manifest.documentSources.length} embedded document sources into ${qdrant.collection}`,
   );
 }
 
 async function main(): Promise<void> {
-  const env = requireEnvSet("seed-qdrant", [
-    {
-      name: "QDRANT_URL",
-      templatePath: "infra/data-plane/providers/qdrant.env.template",
-    },
-    {
-      name: "QDRANT_API_KEY",
-      templatePath: "infra/data-plane/providers/qdrant.env.template",
-    },
-  ]);
-  const config: QdrantSeedConfig = {
-    url: env.QDRANT_URL,
-    apiKey: env.QDRANT_API_KEY,
-    collection: resolveQdrantCollection(process.env.QDRANT_COLLECTION),
-  };
+  const config = resolveRuntimeConfig();
+  const qdrant = config.providers.qdrant;
   console.log(
-    `[seed-qdrant] env check passed for ${config.collection}; the provider template is wired for vector bootstrap`,
+    `[seed-qdrant] resolved runtime config for ${qdrant.collection} with ${qdrant.vectorSize}-dim ${qdrant.distance} vectors`,
   );
   console.log(
-    `[seed-qdrant] canonical manifest loaded with ${seedManifest.modules.length} modules and ${seedManifest.documentSources.length} document sources`,
+    `[seed-qdrant] canonical manifest loaded with ${config.manifest.modules.length} modules and ${config.manifest.documentSources.length} document sources`,
   );
-  await ensureCollection(config);
-  await upsertDocuments(config);
+  await ensureCollection({ config });
+  await upsertDocuments({ config });
   console.log("[seed-qdrant] placeholder completed");
 }
 

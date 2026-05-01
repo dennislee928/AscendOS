@@ -17,17 +17,22 @@ type Handler struct {
 }
 
 // NewHandler builds the Praxis HTTP handler.
-func NewHandler(service string) http.Handler {
+func NewHandler(service, dataDir string) (http.Handler, error) {
+	store, err := domain.NewStreakStore(dataDir)
+	if err != nil {
+		return nil, err
+	}
+
 	h := &Handler{
 		service: service,
-		store:   domain.NewStreakStore(),
+		store:   store,
 		mux:     http.NewServeMux(),
 	}
 
 	h.mux.HandleFunc("/healthz", h.healthz)
 	h.mux.HandleFunc("/habit-streaks", h.habitStreaks)
 	h.mux.HandleFunc("/relapse-risk", h.relapseRisk)
-	return h
+	return h, nil
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -67,7 +72,9 @@ func (h *Handler) habitStreaks(w http.ResponseWriter, r *http.Request) {
 		}
 		writeJSON(w, http.StatusCreated, stored)
 	case http.MethodGet:
-		writeError(w, http.StatusMethodNotAllowed, "use /relapse-risk to forecast")
+		writeJSON(w, http.StatusOK, map[string]any{
+			"habit_streaks": h.store.List(),
+		})
 	default:
 		methodNotAllowed(w)
 	}

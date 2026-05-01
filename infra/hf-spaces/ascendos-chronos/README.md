@@ -8,8 +8,8 @@ app_port: 8080
 pinned: true
 ---
 
-Template for the `chronos` Space.
+Docker-backed deployment contract for `chronos`.
 
-- Dockerfile scaffold: `infra/docker/chronos/Dockerfile`
-- Container should bind to `0.0.0.0:8080`
-- Ensure `CHRONOS_HTTP_ADDR=:8080` at runtime
+- Dockerfile: `infra/docker/chronos/Dockerfile`
+- Container listens on `0.0.0.0:8080`
+- Runtime env: `CHRONOS_HTTP_ADDR=:8080`

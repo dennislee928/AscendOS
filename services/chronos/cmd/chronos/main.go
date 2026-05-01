@@ -11,7 +11,10 @@ import (
 func main() {
 	cfg := config.Load()
 
-	handler := httpapi.NewHandler(cfg.ServiceName)
+	handler, err := httpapi.NewHandler(cfg.ServiceName, cfg.DataDir)
+	if err != nil {
+		log.Fatalf("handler error: %v", err)
+	}
 
 	server := &http.Server{
 		Addr:              cfg.HTTPAddr,

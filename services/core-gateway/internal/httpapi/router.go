@@ -8,13 +8,15 @@ import (
 	"time"
 
 	"core-gateway/internal/auth"
+	natspub "core-gateway/internal/nats"
 	"github.com/gin-gonic/gin"
 )
 
 const requestIDHeader = "X-Request-Id"
 
-func NewRouter() *gin.Engine {
+func NewRouter(pub *natspub.Publisher) *gin.Engine {
 	catalog := newModuleCatalog()
+	authConfig := auth.LoadConfigFromEnv()
 
 	r := gin.New()
 	r.Use(requestIDMiddleware(), gin.Logger(), gin.Recovery())
@@ -36,13 +38,17 @@ func NewRouter() *gin.Engine {
 	})
 
 	r.GET("/modules/:name", func(c *gin.Context) {
-		module, ok := catalog.get(c.Param("name"))
+		name := c.Param("name")
+		module, ok := catalog.get(name)
 		if !ok {
 			c.JSON(http.StatusNotFound, gin.H{"error": "module not found"})
 			return
 		}
 
 		c.JSON(http.StatusOK, module)
+		if pub != nil {
+			pub.Publish("ascendos.gateway.events", map[string]any{"type": "module_access", "module": name, "ts": time.Now().UTC()})
+		}
 	})
 
 	r.GET("/me", func(c *gin.Context) {
@@ -58,17 +64,21 @@ func NewRouter() *gin.Engine {
 			return
 		}
 
-		claims, err := auth.ParseJWTStub(token)
+		claims, err := auth.ParseJWT(token, authConfig)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 			return
 		}
 
-		if _, ok := claims["sub"]; !ok {
+		sub, ok := claims["sub"].(string)
+		if !ok || strings.TrimSpace(sub) == "" {
 			claims["sub"] = "unknown"
 		}
 
 		c.JSON(http.StatusOK, gin.H{"claims": claims})
+		if pub != nil {
+			pub.Publish("ascendos.gateway.events", map[string]any{"type": "module_access", "module": "me", "ts": time.Now().UTC()})
+		}
 	})
 
 	return r

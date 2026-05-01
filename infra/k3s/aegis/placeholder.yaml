@@ -10,6 +10,9 @@ metadata:
   namespace: ascendos-ai
   labels:
     app: aegis
+  annotations:
+    ascendos.io/runtime: rust
+    ascendos.io/listen-port: "8080"
 spec:
   replicas: 1
   selector:
@@ -19,6 +22,9 @@ spec:
     metadata:
       labels:
         app: aegis
+      annotations:
+        ascendos.io/runtime: rust
+        ascendos.io/listen-port: "8080"
     spec:
       securityContext:
         runAsNonRoot: true
@@ -40,12 +46,14 @@ spec:
               drop:
                 - ALL
           readinessProbe:
-            tcpSocket:
+            httpGet:
+              path: /healthz
               port: http
             initialDelaySeconds: 5
             periodSeconds: 10
           livenessProbe:
-            tcpSocket:
+            httpGet:
+              path: /healthz
               port: http
             initialDelaySeconds: 15
             periodSeconds: 20
@@ -69,6 +77,7 @@ spec:
     - name: http
       port: 80
       targetPort: 8080
+      appProtocol: http
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute

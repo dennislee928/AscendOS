@@ -16,6 +16,10 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 FROM gcr.io/distroless/static-debian12:nonroot
 WORKDIR /app
 COPY --from=builder /out/praxis /app/praxis
+LABEL io.ascendos.service="praxis" \
+      io.ascendos.runtime="go" \
+      io.ascendos.listen_port="8082"
+ENV PORT=8082
 EXPOSE 8082
 ENV PRAXIS_HTTP_ADDR=:8082
 USER nonroot:nonroot

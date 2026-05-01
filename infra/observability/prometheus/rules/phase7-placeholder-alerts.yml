@@ -30,3 +30,176 @@ groups:
         annotations:
           summary: "An observability target is down"
           description: "At least one observability target (OTel collector or Jaeger) has been down for more than 2 minutes."
+
+  - name: ascendos-gateway-slo
+    rules:
+      - alert: GatewayHighErrorRate
+        expr: |
+          (
+            sum(rate(http_requests_total{job="ascendos-gateway",status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{job="ascendos-gateway"}[5m]))
+          ) > 0.005
+        for: 5m
+        labels:
+          severity: critical
+          team: slo
+        annotations:
+          summary: "Gateway 5xx error rate exceeds 0.5%"
+          description: "The Ascendos gateway 5xx/total request ratio has been above 0.5% for more than 5 minutes. Current value: {{ $value | humanizePercentage }}."
+
+      - alert: GatewayHighP99Latency
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket{job="ascendos-gateway"}[5m])) by (le)
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: critical
+          team: slo
+        annotations:
+          summary: "Gateway p99 latency exceeds 500ms"
+          description: "The Ascendos gateway p99 request latency has exceeded 500ms for more than 5 minutes. Current value: {{ $value | humanizeDuration }}."
+
+      - alert: GatewayAvailabilityDrop
+        expr: |
+          (
+            sum(rate(http_requests_total{job="ascendos-gateway",status!~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{job="ascendos-gateway"}[5m]))
+          ) < 0.999
+        for: 5m
+        labels:
+          severity: critical
+          team: slo
+        annotations:
+          summary: "Gateway availability dropped below 99.9%"
+          description: "The Ascendos gateway success rate has fallen below 99.9% for more than 5 minutes. Current value: {{ $value | humanizePercentage }}."
+
+  - name: ascendos-module-health
+    rules:
+      - alert: ChronosDown
+        expr: up{job="chronos"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Service chronos is down"
+          description: "Prometheus cannot scrape the chronos job for more than 2 minutes."
+
+      - alert: MetisDown
+        expr: up{job="metis"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Service metis is down"
+          description: "Prometheus cannot scrape the metis job for more than 2 minutes."
+
+      - alert: PraxisDown
+        expr: up{job="praxis"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Service praxis is down"
+          description: "Prometheus cannot scrape the praxis job for more than 2 minutes."
+
+      - alert: AegisDown
+        expr: up{job="aegis"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Service aegis is down"
+          description: "Prometheus cannot scrape the aegis job for more than 2 minutes."
+
+      - alert: OratorDown
+        expr: up{job="orator"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Service orator is down"
+          description: "Prometheus cannot scrape the orator job for more than 2 minutes."
+
+      - alert: NeuroDown
+        expr: up{job="neuro"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Service neuro is down"
+          description: "Prometheus cannot scrape the neuro job for more than 2 minutes."
+
+      - alert: ArgentumDown
+        expr: up{job="argentum"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Service argentum is down"
+          description: "Prometheus cannot scrape the argentum job for more than 2 minutes."
+
+      - alert: KairosDown
+        expr: up{job="kairos"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Service kairos is down"
+          description: "Prometheus cannot scrape the kairos job for more than 2 minutes."
+
+  - name: ascendos-llm-cost
+    rules:
+      - alert: LLMTokenBudgetExceeded
+        expr: |
+          sum(rate(llm_token_total[1h])) * 3600 > 100000
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "LLM token usage exceeds 100k tokens/hour budget"
+          description: "The projected hourly LLM token consumption has exceeded the 100,000 token/hour budget for more than 5 minutes. Current rate: {{ $value | humanize }} tokens/hour."
+
+      - alert: LLMCacheHitRateLow
+        expr: llm_cache_hit_rate < 0.5
+        for: 10m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "LLM cache hit rate dropped below 50%"
+          description: "The LLM response cache hit rate has been below 0.5 (50%) for more than 10 minutes. Current value: {{ $value | humanizePercentage }}. Low cache efficiency increases cost and latency."
+
+  - name: ascendos-hf-space
+    rules:
+      - alert: HFSpaceSleepDetected
+        expr: |
+          (time() - max by (instance, job) (last_over_time(up{job=~".*hf-space.*"}[1h]) * on(instance, job) timestamp(up{job=~".*hf-space.*"}))) > 172800
+        for: 0m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "HuggingFace Space scrape target has a >48h uptime gap"
+          description: "The HF Space scrape target {{ $labels.instance }} (job={{ $labels.job }}) has not been seen for more than 48 hours, indicating the Space may have gone to sleep or been deleted."
+
+      - alert: HFSpaceTargetDown
+        expr: up{job=~".*hf-space.*"} == 0
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "HuggingFace Space target is unreachable"
+          description: "Prometheus cannot scrape HF Space target {{ $labels.instance }} (job={{ $labels.job }}) for more than 5 minutes. The Space may be sleeping or cold-starting."

@@ -8,8 +8,8 @@ app_port: 8080
 pinned: true
 ---
 
-Template for the `core-gateway` Space.
+Docker-backed deployment contract for `core-gateway`.
 
-- Dockerfile scaffold: `infra/docker/core-gateway/Dockerfile`
-- Container should bind to `0.0.0.0:8080`
+- Dockerfile: `infra/docker/core-gateway/Dockerfile`
+- Container listens on `0.0.0.0:8080`
 - Runtime secrets/config: HF Space environment variables

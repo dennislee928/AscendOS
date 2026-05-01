@@ -8,8 +8,8 @@ app_port: 8082
 pinned: true
 ---
 
-Template for the `praxis` Space.
+Docker-backed deployment contract for `praxis`.
 
-- Dockerfile scaffold: `infra/docker/praxis/Dockerfile`
-- Container should bind to `0.0.0.0:8082`
-- Ensure `PRAXIS_HTTP_ADDR=:8082` at runtime
+- Dockerfile: `infra/docker/praxis/Dockerfile`
+- Container listens on `0.0.0.0:8082`
+- Runtime env: `PRAXIS_HTTP_ADDR=:8082`

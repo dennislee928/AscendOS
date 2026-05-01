@@ -60,4 +60,32 @@ mod tests {
 
         assert!(input.validate().is_ok());
     }
+
+    #[test]
+    fn rejects_zero_sample_rate() {
+        let input = ProsodyInput {
+            transcript: Some("hello".to_string()),
+            sample_rate_hz: Some(0),
+            duration_ms: Some(1000),
+        };
+
+        assert_eq!(
+            input.validate(),
+            Err("sample_rate_hz must be greater than zero when provided")
+        );
+    }
+
+    #[test]
+    fn rejects_zero_duration() {
+        let input = ProsodyInput {
+            transcript: Some("hello".to_string()),
+            sample_rate_hz: Some(16_000),
+            duration_ms: Some(0),
+        };
+
+        assert_eq!(
+            input.validate(),
+            Err("duration_ms must be greater than zero when provided")
+        );
+    }
 }

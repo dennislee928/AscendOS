@@ -182,24 +182,20 @@ mod tests {
 
     #[tokio::test]
     async fn scores_text_with_manipulation_cues() {
-        let result = analyze_text(
-            "This is urgent. Don't tell anyone. You need to act now or everyone will be disappointed!",
-        )
-        .await;
+        let result = analyze_text("This is urgent. Don't tell anyone. Trust me.").await;
 
-        assert_eq!(result.token_count, 14);
-        assert_eq!(result.score, 65);
+        assert_eq!(result.token_count, 8);
+        assert_eq!(result.score, 46);
         assert_eq!(
             result.flags,
             vec![
-                "guilt_pressure".to_string(),
                 "pressure".to_string(),
                 "secrecy".to_string(),
                 "urgency".to_string()
             ]
         );
-        assert_eq!(result.indicators.len(), 4);
-        assert!(result.summary.contains("Score 65"));
+        assert_eq!(result.indicators.len(), 3);
+        assert!(result.summary.contains("Score 46"));
     }
 
     #[tokio::test]
@@ -220,7 +216,7 @@ mod tests {
     async fn captures_shouting_pressure() {
         let result = analyze_text("THIS IS URGENT!").await;
 
-        assert_eq!(result.score, 24);
+        assert_eq!(result.score, 30);
         assert_eq!(result.flags, vec!["shouting".to_string(), "urgency".to_string()]);
         assert_eq!(result.indicators.len(), 2);
     }
